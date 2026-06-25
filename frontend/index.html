@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HallBook — Book Your Perfect Hall</title>
+    <meta name="description" content="Book seminar halls, auditoriums and conference rooms instantly with HallBook.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+      /* ══════════ USER CHIP — NAVBAR ══════════ */
+      .user-chip {
+        display: flex; align-items: center; gap: 0.6rem;
+        padding: 0.35rem 0.85rem 0.35rem 0.35rem;
+        background: var(--primary-light);
+        border: 1.5px solid rgba(255,112,52,0.25);
+        border-radius: 99px; cursor: default;
+        transition: 0.2s; text-decoration: none;
+      }
+      .user-chip:hover { background: #FFE4D6; border-color: var(--primary); }
+      .user-chip .chip-avatar {
+        width: 30px; height: 30px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), #FFA07A);
+        color: white; display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 0.85rem; flex-shrink: 0;
+      }
+      .user-chip .chip-name {
+        font-size: 0.85rem; font-weight: 600;
+        color: var(--primary); max-width: 120px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .user-chip .chip-dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--success); flex-shrink: 0;
+        box-shadow: 0 0 0 2px rgba(16,185,129,0.2);
+      }
+      /* ══════════ PROFILE DROPDOWN ══════════ */
+      .user-chip-wrap {
+        position: relative;
+      }
+      .user-chip { cursor: pointer; }
+
+      .profile-dropdown {
+        position: absolute; top: calc(100% + 12px); right: 0;
+        width: 280px;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        box-shadow: 0 20px 48px rgba(0,0,0,0.14);
+        overflow: hidden;
+        z-index: 2000;
+        opacity: 0; transform: translateY(-8px) scale(0.97);
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+      }
+      .profile-dropdown.open {
+        opacity: 1; transform: translateY(0) scale(1);
+        pointer-events: auto;
+      }
+      .pd-header {
+        background: linear-gradient(135deg, #FF7034, #FF9A5E);
+        padding: 1.25rem 1.25rem 1rem;
+        display: flex; align-items: center; gap: 0.85rem;
+      }
+      .pd-big-avatar {
+        width: 46px; height: 46px; border-radius: 50%;
+        background: rgba(255,255,255,0.25);
+        border: 2px solid rgba(255,255,255,0.5);
+        color: #fff; font-weight: 800; font-size: 1.2rem;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+      }
+      .pd-header-info .pd-full-name {
+        font-weight: 700; font-size: 0.95rem; color: #fff;
+      }
+      .pd-header-info .pd-tag {
+        font-size: 0.72rem; color: rgba(255,255,255,0.75);
+        font-weight: 500; margin-top: 1px;
+      }
+      .pd-body { padding: 0.85rem 1.1rem; }
+      .pd-row {
+        display: flex; align-items: center; gap: 0.65rem;
+        padding: 0.55rem 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.86rem; color: var(--text);
+      }
+      .pd-row:last-of-type { border-bottom: none; }
+      .pd-row svg { color: var(--primary); flex-shrink: 0; }
+      .pd-row .pd-label {
+        font-size: 0.7rem; font-weight: 600;
+        color: var(--muted); text-transform: uppercase;
+        letter-spacing: 0.5px; display: block;
+      }
+      .pd-row .pd-value {
+        font-weight: 500; color: var(--secondary);
+        word-break: break-all;
+      }
+      .pd-row .pd-empty { color: var(--muted); font-style: italic; font-size:0.8rem; }
+      .pd-footer { padding: 0.75rem 1.1rem; border-top: 1px solid var(--border); }
+      .pd-change-btn {
+        width: 100%; padding: 0.6rem;
+        background: #FEF2F2; color: var(--error);
+        border: 1px solid #FECACA; border-radius: 10px;
+        font-size: 0.83rem; font-weight: 600;
+        cursor: pointer; font-family: 'Inter', sans-serif;
+        transition: 0.2s; display: flex; align-items: center;
+        justify-content: center; gap: 0.4rem;
+      }
+      .pd-change-btn:hover { background: var(--error); color: #fff; }
+
+      /* ══════════ USER DETAILS ONBOARDING PAGE ══════════ */
+      #user-onboarding {
+        position: fixed; inset: 0; z-index: 5000;
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
+        display: flex; align-items: center; justify-content: center;
+        padding: 1rem;
+        transition: opacity 0.5s ease, transform 0.5s ease;
+      }
+      #user-onboarding.fade-out {
+        opacity: 0; transform: scale(1.04); pointer-events: none;
+      }
+      #user-onboarding.hidden { display: none; }
+
+      .onboarding-card {
+        background: rgba(255,255,255,0.04);
+        backdrop-filter: blur(24px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 28px;
+        padding: 3rem 3.5rem;
+        width: 100%; max-width: 520px;
+        box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+        animation: ob-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      @keyframes ob-in {
+        from { opacity: 0; transform: translateY(30px) scale(0.95); }
+        to   { opacity: 1; transform: translateY(0)    scale(1); }
+      }
+
+      .ob-logo {
+        display: flex; align-items: center; gap: 0.6rem;
+        font-size: 1.4rem; font-weight: 800; color: #fff;
+        margin-bottom: 2.5rem;
+      }
+      .ob-logo-icon {
+        width: 40px; height: 40px; border-radius: 12px;
+        background: linear-gradient(135deg, #FF7034, #FF9A5E);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 4px 16px rgba(255,112,52,0.4);
+      }
+      .ob-logo-icon svg { width: 20px; height: 20px; color: white; }
+      .ob-logo span { color: #FF7034; }
+
+      .ob-heading {
+        font-size: 1.9rem; font-weight: 800;
+        color: #fff; line-height: 1.2;
+        margin-bottom: 0.5rem;
+      }
+      .ob-subheading {
+        color: rgba(255,255,255,0.5);
+        font-size: 0.95rem; margin-bottom: 2.5rem;
+      }
+
+      .ob-form-group {
+        margin-bottom: 1.4rem;
+        position: relative;
+      }
+      .ob-label {
+        display: flex; align-items: center; gap: 0.45rem;
+        font-size: 0.82rem; font-weight: 600;
+        color: rgba(255,255,255,0.6);
+        text-transform: uppercase; letter-spacing: 0.8px;
+        margin-bottom: 0.5rem;
+      }
+      .ob-label .req { color: #FF7034; }
+      .ob-input {
+        width: 100%; padding: 0.9rem 1.1rem;
+        background: rgba(255,255,255,0.07);
+        border: 1.5px solid rgba(255,255,255,0.12);
+        border-radius: 12px;
+        color: #fff; font-family: 'Inter', sans-serif;
+        font-size: 1rem; transition: all 0.25s;
+        outline: none;
+      }
+      .ob-input::placeholder { color: rgba(255,255,255,0.25); }
+      .ob-input:focus {
+        border-color: #FF7034;
+        background: rgba(255,112,52,0.08);
+        box-shadow: 0 0 0 4px rgba(255,112,52,0.15);
+      }
+      .ob-input.ob-error {
+        border-color: #EF4444;
+        box-shadow: 0 0 0 4px rgba(239,68,68,0.15);
+      }
+      .ob-input-icon {
+        position: absolute; left: 1rem; top: 50%;
+        transform: translateY(-50%);
+        color: rgba(255,255,255,0.3);
+        pointer-events: none;
+      }
+      .ob-input-has-icon { padding-left: 2.75rem !important; }
+
+      .ob-form-row {
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+
+      .ob-btn {
+        width: 100%; padding: 1rem;
+        background: linear-gradient(135deg, #FF7034, #FF9A5E);
+        color: #fff; border: none; border-radius: 12px;
+        font-family: 'Inter', sans-serif;
+        font-size: 1rem; font-weight: 700;
+        cursor: pointer; margin-top: 0.75rem;
+        display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+        transition: all 0.25s;
+        box-shadow: 0 6px 24px rgba(255,112,52,0.4);
+      }
+      .ob-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 32px rgba(255,112,52,0.55);
+      }
+      .ob-btn:active { transform: translateY(0); }
+
+      .ob-divider {
+        border: none; border-top: 1px solid rgba(255,255,255,0.08);
+        margin: 2rem 0 1.5rem;
+      }
+
+      .ob-privacy {
+        text-align: center; font-size: 0.78rem;
+        color: rgba(255,255,255,0.3); margin-top: 1.25rem;
+        display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+      }
+
+      .ob-error-msg {
+        color: #EF4444; font-size: 0.78rem;
+        margin-top: 0.4rem; display: none;
+      }
+      .ob-error-msg.visible { display: block; }
+
+      /* Floating background blobs */
+      .ob-blob {
+        position: absolute; border-radius: 50%;
+        filter: blur(80px); pointer-events: none; opacity: 0.15;
+      }
+      .ob-blob-1 {
+        width: 400px; height: 400px;
+        background: #FF7034;
+        top: -100px; right: -100px;
+        animation: blob-float 8s ease-in-out infinite;
+      }
+      .ob-blob-2 {
+        width: 300px; height: 300px;
+        background: #8B5CF6;
+        bottom: -80px; left: -80px;
+        animation: blob-float 10s ease-in-out infinite reverse;
+      }
+      @keyframes blob-float {
+        0%,100% { transform: translate(0,0) scale(1); }
+        50%      { transform: translate(30px,-20px) scale(1.1); }
+      }
+
+      @media (max-width: 600px) {
+        .onboarding-card { padding: 2rem 1.5rem; }
+        .ob-heading { font-size: 1.5rem; }
+        .ob-form-row { grid-template-columns: 1fr; }
+      }
+    </style>
+</head>
+
+<body>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         STEP 1 — USER DETAILS ONBOARDING
+    ══════════════════════════════════════════════════════════ -->
+    <div id="user-onboarding">
+      <!-- Background blobs -->
+      <div class="ob-blob ob-blob-1"></div>
+      <div class="ob-blob ob-blob-2"></div>
+
+      <div class="onboarding-card">
+
+        <!-- Logo -->
+        <div class="ob-logo">
+          <div class="ob-logo-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/>
+              <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
+              <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
+              <path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
+            </svg>
+          </div>
+          Hall<span>Book</span>
+        </div>
+
+        <!-- Heading -->
+        <h1 class="ob-heading">Welcome! Let's get<br>you set up 👋</h1>
+        <p class="ob-subheading">Tell us a bit about yourself to continue booking halls.</p>
+
+        <!-- Form -->
+        <form id="user-details-form" novalidate>
+
+          <!-- Full Name -->
+          <div class="ob-form-group">
+            <label class="ob-label" for="ob-name">
+              Full Name <span class="req">*</span>
+            </label>
+            <div style="position:relative">
+              <svg class="ob-input-icon" width="16" height="16" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              <input class="ob-input ob-input-has-icon" type="text" id="ob-name"
+                     placeholder="e.g. John Doe" autocomplete="name" required>
+            </div>
+            <div class="ob-error-msg" id="ob-name-err">Please enter your full name.</div>
+          </div>
+
+          <!-- Email -->
+          <div class="ob-form-group">
+            <label class="ob-label" for="ob-email">
+              Email ID <span class="req">*</span>
+            </label>
+            <div style="position:relative">
+              <svg class="ob-input-icon" width="16" height="16" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2">
+                <rect width="20" height="16" x="2" y="4" rx="2"/>
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+              </svg>
+              <input class="ob-input ob-input-has-icon" type="email" id="ob-email"
+                     placeholder="you@example.com" autocomplete="email" required>
+            </div>
+            <div class="ob-error-msg" id="ob-email-err">Please enter a valid email address.</div>
+          </div>
+
+          <!-- Department & Phone (side by side) -->
+          <div class="ob-form-row">
+            <!-- Department -->
+            <div class="ob-form-group">
+              <label class="ob-label" for="ob-dept">Department</label>
+              <div style="position:relative">
+                <svg class="ob-input-icon" width="16" height="16" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="20" height="14" x="2" y="7" rx="2"/>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                </svg>
+                <input class="ob-input ob-input-has-icon" type="text" id="ob-dept"
+                       placeholder="e.g. CSE" autocomplete="organization">
+              </div>
+            </div>
+
+            <!-- Phone (optional) -->
+            <div class="ob-form-group">
+              <label class="ob-label" for="ob-phone">Phone <span style="opacity:.5;font-size:.7rem;text-transform:none;letter-spacing:0">(optional)</span></label>
+              <div style="position:relative">
+                <svg class="ob-input-icon" width="16" height="16" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                </svg>
+                <input class="ob-input ob-input-has-icon" type="tel" id="ob-phone"
+                       placeholder="+91 98765 43210" autocomplete="tel">
+              </div>
+            </div>
+          </div>
+
+          <hr class="ob-divider">
+
+          <button type="submit" class="ob-btn" id="ob-submit">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5">
+              <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+            </svg>
+            Continue to Hall Booking
+          </button>
+        </form>
+
+        <div class="ob-privacy">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2">
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          Your details are stored locally and never shared.
+        </div>
+
+      </div><!-- /.onboarding-card -->
+    </div><!-- /#user-onboarding -->
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo"><i data-lucide="building-2"></i>Hall<span>Book</span></a>
+            <div class="nav-links">
+                <a href="#" class="active">Home</a>
+                <a href="#book">Book Hall</a>
+                <a href="#bookings">My Bookings</a>
+            </div>
+            <div class="nav-right">
+                <a href="admin.html" class="admin-link" title="Admin Panel">
+                    <i data-lucide="shield-check"></i> Admin
+                </a>
+                <!-- User chip + profile dropdown -->
+                <div class="user-chip-wrap" id="user-chip-wrap">
+                  <div class="user-chip" id="user-chip" style="display:none" title="View profile">
+                    <div class="chip-avatar" id="chip-avatar">?</div>
+                    <span class="chip-name" id="chip-name">User</span>
+                    <span class="chip-dot"></span>
+                  </div>
+
+                  <!-- Profile dropdown -->
+                  <div class="profile-dropdown" id="profile-dropdown">
+                    <div class="pd-header">
+                      <div class="pd-big-avatar" id="pd-avatar">?</div>
+                      <div class="pd-header-info">
+                        <div class="pd-full-name" id="pd-full-name">—</div>
+                        <div class="pd-tag">HallBook Member</div>
+                      </div>
+                    </div>
+                    <div class="pd-body">
+                      <!-- Email -->
+                      <div class="pd-row">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                        <div>
+                          <span class="pd-label">Email</span>
+                          <span class="pd-value" id="pd-email">—</span>
+                        </div>
+                      </div>
+                      <!-- Department -->
+                      <div class="pd-row">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        <div>
+                          <span class="pd-label">Department</span>
+                          <span class="pd-value" id="pd-dept">—</span>
+                        </div>
+                      </div>
+                      <!-- Phone -->
+                      <div class="pd-row">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        <div>
+                          <span class="pd-label">Phone</span>
+                          <span class="pd-value" id="pd-phone">—</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="pd-footer">
+                      <button class="pd-change-btn" id="pd-change-btn">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Change Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <!-- ═══════════ HERO ═══════════ -->
+        <section class="hero">
+            <div class="hero-content">
+                <div class="hero-tag"><i data-lucide="zap"></i> Instant Booking</div>
+                <h1>Book Your Perfect Hall <span>Easily</span></h1>
+                <p>Premium venues for seminars, conferences and events — available at your fingertips.</p>
+                <a href="#book" class="btn-primary">
+                    Start Booking <i data-lucide="chevron-right"></i>
+                </a>
+            </div>
+
+            <!-- FLOATING HALL CARDS -->
+            <div class="hero-cards-container">
+                <!-- glow blob -->
+                <div class="hero-glow"></div>
+
+                <div class="hall-float-card hfc-1" id="hfc-1">
+                    <div class="hfc-icon auditorium"><i data-lucide="mic-2"></i></div>
+                    <div class="hfc-body">
+                        <div class="hfc-name">Auditorium</div>
+                        <div class="hfc-cap"><i data-lucide="users"></i> 500 capacity</div>
+                    </div>
+                    <div class="hfc-status available" id="hfc-status-1">
+                        <span class="status-dot"></span> Available
+                    </div>
+                </div>
+
+                <div class="hall-float-card hfc-2" id="hfc-2">
+                    <div class="hfc-icon seminar"><i data-lucide="presentation"></i></div>
+                    <div class="hfc-body">
+                        <div class="hfc-name">Seminar Hall</div>
+                        <div class="hfc-cap"><i data-lucide="users"></i> 150 capacity</div>
+                    </div>
+                    <div class="hfc-status available" id="hfc-status-2">
+                        <span class="status-dot"></span> Available
+                    </div>
+                </div>
+
+                <div class="hall-float-card hfc-3" id="hfc-3">
+                    <div class="hfc-icon conference"><i data-lucide="briefcase"></i></div>
+                    <div class="hfc-body">
+                        <div class="hfc-name">Conference Room</div>
+                        <div class="hfc-cap"><i data-lucide="users"></i> 50 capacity</div>
+                    </div>
+                    <div class="hfc-status available" id="hfc-status-3">
+                        <span class="status-dot"></span> Available
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ BOOKING FORM ═══════════ -->
+        <section id="book" class="booking-section">
+            <div class="section-header centered">
+                <h2>Quick Book</h2>
+                <p>Select a hall, date and time slot to reserve instantly</p>
+            </div>
+
+            <div class="booking-card">
+                <form id="booking-form" class="booking-form">
+
+                    <!-- Hall Select -->
+                    <div class="form-group">
+                        <label><i data-lucide="map-pin"></i> Select Venue</label>
+                        <select id="hall-select" required>
+                            <option value="">Choose a hall...</option>
+                            <option value="1">L F Rasquina Hall— 123 pax</option>
+                            <option value="2">Robert Sequeria Hall — 415 pax</option>
+                            <option value="3">Sanidhya Hall — 80 pax</option>
+                            <option value="4">Magis Hall — 50 pax</option>
+                            <option value="5">Arrupe Hall 1 — </option>
+                            <option value="6">Arrupe Hall 2 — </option>
+                            <option value="7">Arrupe Hall 3 — </option>
+                            <option value="8">AV Room — 120 pax</option>
+                            <option value="9">Joseph Willy Hall— 80 pax</option>
+                            <option value="10">Eric Mathias — 200 pax</option>
+                            <option value="11">Xavier Hall — 150 pax</option>
+                        </select>
+                    </div>
+
+                    <!-- Date -->
+                    <div class="form-group">
+                        <label><i data-lucide="calendar"></i> Select Date</label>
+                        <input type="date" id="date-select" required>
+                    </div>
+
+                    <!-- Radial Time Pickers (Start & End) -->
+                    <div class="form-row" style="display: flex; gap: 1rem; margin-bottom: 1.2rem;">
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label><i data-lucide="clock"></i> Start Time</label>
+                            <button type="button" class="tp-trigger" id="tp-trigger-start">
+                                <i data-lucide="clock-3"></i>
+                                <span id="tp-trigger-text-start">Start...</span>
+                            </button>
+                            <input type="hidden" id="time-select-start">
+                        </div>
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label><i data-lucide="clock"></i> End Time</label>
+                            <button type="button" class="tp-trigger" id="tp-trigger-end">
+                                <i data-lucide="clock-3"></i>
+                                <span id="tp-trigger-text-end">End...</span>
+                            </button>
+                            <input type="hidden" id="time-select-end">
+                        </div>
+                    </div>
+                    <div class="time-error hidden" id="time-error" style="margin-bottom: 1rem; margin-top: -0.5rem;">⚠ Please select both start and end times</div>
+
+                    <button type="submit" class="btn-primary full-width" style="margin-top: 8px;" id="submit-btn">
+                        <i data-lucide="calendar-check"></i>
+                        <span>Confirm Booking</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ═══════════ MY BOOKINGS ═══════════ -->
+        <section id="bookings" class="my-bookings-section">
+            <div class="section-header">
+                <h2>My Bookings</h2>
+                <div class="badge-count" id="booking-count">0</div>
+            </div>
+            <div id="bookings-container" class="bookings-grid"></div>
+            <div id="empty-state" class="empty-state visible">
+                <div class="empty-icon-wrap"><i data-lucide="calendar-x"></i></div>
+                <h3>No bookings yet</h3>
+                <p>When you book a hall, it will appear here.</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+    <script>
+      // ══════════════ USER ONBOARDING LOGIC ══════════════
+      (function () {
+        const overlay   = document.getElementById('user-onboarding');
+        const form      = document.getElementById('user-details-form');
+        const nameInput = document.getElementById('ob-name');
+        const emailInput= document.getElementById('ob-email');
+        const deptInput = document.getElementById('ob-dept');
+        const phoneInput= document.getElementById('ob-phone');
+        const nameErr   = document.getElementById('ob-name-err');
+        const emailErr  = document.getElementById('ob-email-err');
+        const submitBtn = document.getElementById('ob-submit');
+
+        // Helper: populate navbar chip + dropdown
+        function updateNavChip(user) {
+          const chip     = document.getElementById('user-chip');
+          const chipAv   = document.getElementById('chip-avatar');
+          const chipName = document.getElementById('chip-name');
+          if (!chip) return;
+          const initial = user.name.charAt(0).toUpperCase();
+          chipAv.textContent   = initial;
+          chipName.textContent = user.name.split(' ')[0];
+          chip.style.display   = 'flex';
+
+          // Populate dropdown
+          document.getElementById('pd-avatar').textContent    = initial;
+          document.getElementById('pd-full-name').textContent = user.name;
+          document.getElementById('pd-email').textContent     = user.email || '—';
+          const deptEl  = document.getElementById('pd-dept');
+          const phoneEl = document.getElementById('pd-phone');
+          deptEl.textContent  = user.dept  || '';
+          phoneEl.textContent = user.phone || '';
+          if (!user.dept)  { deptEl.textContent  = 'Not provided'; deptEl.className  = 'pd-value pd-empty'; }
+          if (!user.phone) { phoneEl.textContent = 'Not provided'; phoneEl.className = 'pd-value pd-empty'; }
+        }
+
+        // Dropdown toggle
+        const chip      = document.getElementById('user-chip');
+        const dropdown  = document.getElementById('profile-dropdown');
+        const changeBtn = document.getElementById('pd-change-btn');
+
+        chip.addEventListener('click', function (e) {
+          e.stopPropagation();
+          dropdown.classList.toggle('open');
+        });
+
+        // Close on outside click
+        document.addEventListener('click', function (e) {
+          if (!document.getElementById('user-chip-wrap').contains(e.target)) {
+            dropdown.classList.remove('open');
+          }
+        });
+
+        // Change details — clear and show form again
+        changeBtn.addEventListener('click', function () {
+          localStorage.removeItem('hb_user');
+          sessionStorage.removeItem('hb_user');
+          location.reload();
+        });
+
+        // If user already saved details, skip onboarding & show chip
+        const saved = JSON.parse(sessionStorage.getItem('hb_user') || 'null');
+        if (saved && saved.name && saved.email) {
+          overlay.classList.add('hidden');
+          updateNavChip(saved);
+        } else {
+          nameInput.focus();
+        }
+
+        function validateEmail(v) {
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+        }
+
+        function clearError(input, errEl) {
+          input.classList.remove('ob-error');
+          errEl.classList.remove('visible');
+        }
+
+        nameInput.addEventListener('input',  () => clearError(nameInput,  nameErr));
+        emailInput.addEventListener('input', () => clearError(emailInput, emailErr));
+
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          let valid = true;
+
+          // Validate name
+          if (!nameInput.value.trim()) {
+            nameInput.classList.add('ob-error');
+            nameErr.classList.add('visible');
+            valid = false;
+          } else {
+            clearError(nameInput, nameErr);
+          }
+
+          // Validate email
+          if (!validateEmail(emailInput.value)) {
+            emailInput.classList.add('ob-error');
+            emailErr.classList.add('visible');
+            valid = false;
+          } else {
+            clearError(emailInput, emailErr);
+          }
+
+          if (!valid) return;
+
+          // Save to sessionStorage (session-scoped — each user gets their own session)
+          const userData = {
+            name:  nameInput.value.trim(),
+            email: emailInput.value.trim(),
+            dept:  deptInput.value.trim(),
+            phone: phoneInput.value.trim()
+          };
+          sessionStorage.setItem('hb_user', JSON.stringify(userData));
+
+          // Update navbar user chip
+          updateNavChip(userData);
+
+          // Animate out
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> Getting started...';
+          overlay.classList.add('fade-out');
+          setTimeout(() => overlay.classList.add('hidden'), 520);
+        });
+      })();
+    </script>
+
+    <!-- ═══════ RADIAL TIME PICKER MODAL ═══════ -->
+    <div id="tp-overlay" class="tp-overlay hidden" role="dialog" aria-modal="true" aria-label="Time Picker">
+        <div class="tp-dialog">
+
+            <!-- Orange header -->
+            <div class="tp-header">
+                <span class="tp-header-label" id="tp-header-label">SELECT HOUR</span>
+            </div>
+
+            <!-- Numeric time display -->
+            <div class="tp-display">
+                <div class="tp-display-left">
+                    <button type="button" class="tp-seg active" id="tp-disp-hour">09</button>
+                    <span class="tp-colon">:</span>
+                    <button type="button" class="tp-seg" id="tp-disp-min">00</button>
+                </div>
+                <div class="tp-ampm">
+                    <button type="button" class="tp-ampm-btn active" id="tp-am">AM</button>
+                    <button type="button" class="tp-ampm-btn" id="tp-pm">PM</button>
+                </div>
+            </div>
+
+            <!-- Circular clock face (SVG) -->
+            <div class="tp-clock-wrap">
+                <svg class="tp-clock" id="tp-clock" viewBox="0 0 280 280">
+                    <!-- Face -->
+                    <circle cx="140" cy="140" r="128" class="tp-face" />
+
+                    <!-- Tick marks -->
+                    <g id="tp-ticks" opacity="0.15"></g>
+
+                    <!-- Numbers -->
+                    <g id="tp-numbers"></g>
+
+                    <!-- Needle -->
+                    <line id="tp-hand" x1="140" y1="140" x2="140" y2="42" class="tp-hand" />
+                    <circle id="tp-tip" cx="140" cy="42" r="22" class="tp-tip" />
+                    <!-- Tip number (selected) -->
+                    <text id="tp-tip-text" x="140" y="42" class="tp-tip-text" text-anchor="middle"
+                        dominant-baseline="central">9</text>
+                    <!-- Center dot -->
+                    <circle cx="140" cy="140" r="5" class="tp-center" />
+                </svg>
+            </div>
+
+            <!-- Actions -->
+            <div class="tp-actions">
+                <button type="button" class="tp-cancel" id="tp-cancel">CANCEL</button>
+                <button type="button" class="tp-ok" id="tp-ok">OK</button>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+
+</html>

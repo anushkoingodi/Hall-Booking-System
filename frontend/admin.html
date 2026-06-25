@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HallBook Admin — Control Panel</title>
+  <meta name="description" content="Admin control panel for HallBook booking management system.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+  <!-- LOGIN OVERLAY -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-logo">
+        <i data-lucide="shield-check"></i>
+      </div>
+      <h2>Admin Access</h2>
+      <p>Enter your credentials to continue</p>
+      <div class="login-form">
+        <div class="login-field">
+          <i data-lucide="user"></i>
+          <input id="login-user" type="text" placeholder="Username" autocomplete="off">
+        </div>
+        <div class="login-field">
+          <i data-lucide="lock"></i>
+          <input id="login-pass" type="password" placeholder="Password">
+        </div>
+        <div id="login-error" class="login-error hidden">❌ Invalid credentials</div>
+        <button id="login-btn" class="login-btn">Sign In <i data-lucide="arrow-right"></i></button>
+      </div>
+      <p class="login-hint">Default: admin / admin123</p>
+    </div>
+  </div>
+
+  <!-- ADMIN LAYOUT -->
+  <div id="admin-layout" class="admin-layout hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <i data-lucide="building-2"></i>
+        <span>Hall<b>Book</b></span>
+        <span class="admin-badge">ADMIN</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-section="dashboard" id="nav-dashboard">
+          <i data-lucide="layout-dashboard"></i> Dashboard
+        </a>
+        <a href="#" class="nav-item" data-section="bookings" id="nav-bookings">
+          <i data-lucide="calendar-check"></i> All Bookings
+          <span class="nav-badge" id="sidebar-count">0</span>
+        </a>
+        <a href="#" class="nav-item" data-section="halls" id="nav-halls">
+          <i data-lucide="building"></i> Halls
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="admin-user">
+          <div class="admin-avatar">A</div>
+          <div>
+            <div class="admin-name">Administrator</div>
+            <div class="admin-role">Super Admin</div>
+          </div>
+        </div>
+        <button id="logout-btn" class="logout-btn" title="Logout">
+          <i data-lucide="log-out"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="admin-main">
+
+      <!-- HEADER -->
+      <header class="admin-header">
+        <div>
+          <h1 id="page-title">Dashboard</h1>
+          <p id="page-subtitle">Overview of all hall bookings</p>
+        </div>
+        <div class="header-actions">
+          <div id="db-status-pill" class="status-pill checking">
+            <span class="status-dot"></span>
+            <span id="db-status-text">Checking DB...</span>
+          </div>
+          <button id="refresh-btn" class="icon-btn" title="Refresh">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- DASHBOARD SECTION -->
+      <section id="section-dashboard" class="section active">
+        <div class="stats-grid" id="stats-grid">
+          <div class="stat-card total">
+            <div class="stat-icon"><i data-lucide="calendar-check-2"></i></div>
+            <div class="stat-info">
+              <div class="stat-value" id="stat-total">—</div>
+              <div class="stat-label">Total Bookings</div>
+            </div>
+          </div>
+          <div class="stat-card today">
+            <div class="stat-icon"><i data-lucide="clock"></i></div>
+            <div class="stat-info">
+              <div class="stat-value" id="stat-today">—</div>
+              <div class="stat-label">Today's Bookings</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent bookings preview -->
+        <div class="dashboard-card">
+          <div class="card-header">
+            <h3>Recent Bookings</h3>
+            <a href="#" class="view-all-link" id="view-all-link">View All <i data-lucide="arrow-right"></i></a>
+          </div>
+          <div id="recent-bookings-table"></div>
+        </div>
+      </section>
+
+      <!-- BOOKINGS SECTION -->
+      <section id="section-bookings" class="section">
+        <div class="table-toolbar">
+          <div class="search-bar">
+            <i data-lucide="search"></i>
+            <input id="search-input" type="text" placeholder="Search by hall, user, email, date or time...">
+          </div>
+          <div class="filter-group">
+            <select id="filter-hall">
+              <option value="">All Halls</option>
+              <option value="1">L F Rasquina Hall</option>
+              <option value="2">Robert Sequeria Hall</option>
+              <option value="3">Sanidhya Hall</option>
+              <option value="4">Magis Hall</option>
+              <option value="5">Arrupe Hall 1</option>
+              <option value="6">Arrupe Hall 2</option>
+              <option value="7">Arrupe Hall 3</option>
+              <option value="8">AV Room</option>
+              <option value="9">Joseph Willy Hall</option>
+              <option value="10">Eric Mathias</option>
+              <option value="11">Xavier Hall</option>
+            </select>
+            <select id="filter-date">
+              <option value="">All Dates</option>
+              <option value="today">Today</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="past">Past</option>
+            </select>
+          </div>
+          <button id="delete-all-btn" class="danger-btn">
+            <i data-lucide="trash-2"></i> Clear All
+          </button>
+        </div>
+
+        <div class="table-card">
+          <table class="bookings-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Hall</th>
+                <th>Date</th>
+                <th>Time Slot</th>
+                <th>Booked By</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="bookings-tbody">
+              <tr><td colspan="7" class="loading-row"><span class="spinner"></span> Loading bookings...</td></tr>
+            </tbody>
+          </table>
+          <div id="table-empty" class="table-empty hidden">
+            <i data-lucide="inbox"></i>
+            <p>No bookings found</p>
+          </div>
+        </div>
+        <div id="table-footer" class="table-footer">
+          <span id="results-count"></span>
+        </div>
+      </section>
+
+      <!-- HALLS SECTION -->
+      <section id="section-halls" class="section">
+        <div class="halls-grid" id="halls-grid">
+          <!-- Injected by JS -->
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- CONFIRM MODAL -->
+  <div id="confirm-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-icon danger"><i data-lucide="alert-triangle"></i></div>
+      <h3 id="modal-title">Confirm Delete</h3>
+      <p id="modal-message">Are you sure you want to delete this booking?</p>
+      <div class="modal-actions">
+        <button id="modal-cancel" class="modal-btn cancel">Cancel</button>
+        <button id="modal-confirm" class="modal-btn danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
