@@ -45,7 +45,7 @@
 
       .profile-dropdown {
         position: absolute; top: calc(100% + 12px); right: 0;
-        width: 280px;
+        width: 90vw; max-width: 280px;
         background: #fff;
         border: 1px solid var(--border);
         border-radius: 18px;
@@ -118,6 +118,7 @@
         display: flex; align-items: center; justify-content: center;
         padding: 1rem;
         transition: opacity 0.5s ease, transform 0.5s ease;
+        overflow: hidden;
       }
       #user-onboarding.fade-out {
         opacity: 0; transform: scale(1.04); pointer-events: none;

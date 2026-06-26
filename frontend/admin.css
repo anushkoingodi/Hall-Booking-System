@@ -48,7 +48,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 24px;
   padding: 3rem 2.5rem;
-  width: 420px;
+  width: 100%; max-width: 420px;
   text-align: center;
   box-shadow: 0 40px 80px rgba(0,0,0,0.5);
   animation: fadeUp 0.4s ease;
@@ -343,6 +343,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  overflow-x: auto;
 }
 
 .bookings-table {
@@ -449,7 +450,7 @@ body {
 }
 .modal-card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: 20px; padding: 2.5rem; width: 400px;
+  border-radius: 20px; padding: 2.5rem; width: 100%; max-width: 400px;
   text-align: center; animation: fadeUp 0.25s ease;
   box-shadow: 0 40px 80px rgba(0,0,0,0.5);
 }
@@ -504,4 +505,17 @@ body {
   .admin-main { margin-left: 60px; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .table-toolbar { flex-direction: column; align-items: stretch; }
+}
+
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .admin-header { padding: 0 1rem; }
+  .section { padding: 1rem; }
+  .hall-card { padding: 1.25rem; }
+  .login-card { width: 90%; padding: 2rem 1.5rem; }
+  .modal-card { width: 90%; padding: 1.5rem; }
+  .toast-container { right: 1rem; left: 1rem; bottom: 1rem; }
+  .toast { min-width: 0; width: 100%; }
+  .admin-header h1 { font-size: 1.1rem; }
+  .admin-header p { font-size: 0.75rem; }
 }

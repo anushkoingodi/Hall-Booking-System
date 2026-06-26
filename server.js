@@ -2,8 +2,10 @@ const express = require("express");
 const mongoose = require("mongoose");
 const app = express();
 
+const path = require("path");
+
 app.use(express.json());
-app.use(express.static("frontend"));
+app.use(express.static(path.join(__dirname, "frontend")));
 
 // ── MongoDB Connection ──────────────────────────────────────────
 mongoose.connect("mongodb://anushkoingodi:eWpn8oJucmXQCEQ6@ac-bgpps8t-shard-00-00.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-01.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-02.onoe5sw.mongodb.net:27017/hallbooking?ssl=true&replicaSet=atlas-281qpd-shard-0&authSource=admin")
@@ -206,6 +208,10 @@ app.post("/admin/delete-all", async (req, res) => {
 });
 
 // ── Start server ───────────────────────────────────────────────
-app.listen(5000, () => {
-  console.log("🚀 Server running on http://localhost:5000");
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(5000, () => {
+    console.log("🚀 Server running on http://localhost:5000");
+  });
+}
+
+module.exports = app;
