@@ -1,24 +1,24 @@
 // ── Constants ─────────────────────────────────────────────────
 const ADMIN_USER = "admin";
-const ADMIN_PASS = "admin123";
+const ADMIN_PASS = "admin124";
 
 const HALLS = {
-  "1":  { name: "L F Rasquina Hall",    capacity: "123 pax" },
-  "2":  { name: "Robert Sequeria Hall", capacity: "415 pax" },
-  "3":  { name: "Sanidhya Hall",        capacity: "80 pax"  },
-  "4":  { name: "Magis Hall",           capacity: "50 pax"  },
-  "5":  { name: "Arrupe Hall 1",        capacity: "N/A"     },
-  "6":  { name: "Arrupe Hall 2",        capacity: "N/A"     },
-  "7":  { name: "Arrupe Hall 3",        capacity: "N/A"     },
-  "8":  { name: "AV Room",              capacity: "120 pax" },
-  "9":  { name: "Joseph Willy Hall",    capacity: "80 pax"  },
-  "10": { name: "Eric Mathias Hall",    capacity: "200 pax" },
-  "11": { name: "Xavier Hall",          capacity: "150 pax" }
+  "1": { name: "L F Rasquina Hall", capacity: "123 pax" },
+  "2": { name: "Robert Sequeria Hall", capacity: "415 pax" },
+  "3": { name: "Sanidhya Hall", capacity: "80 pax" },
+  "4": { name: "Magis Hall", capacity: "50 pax" },
+  "5": { name: "Arrupe Hall 1", capacity: "N/A" },
+  "6": { name: "Arrupe Hall 2", capacity: "N/A" },
+  "7": { name: "Arrupe Hall 3", capacity: "N/A" },
+  "8": { name: "AV Room", capacity: "120 pax" },
+  "9": { name: "Joseph Willy Hall", capacity: "80 pax" },
+  "10": { name: "Eric Mathias Hall", capacity: "200 pax" },
+  "11": { name: "Xavier Hall", capacity: "150 pax" }
 };
 
 // ── State ─────────────────────────────────────────────────────
-let allBookings    = [];
-let pendingDeleteId  = null;
+let allBookings = [];
+let pendingDeleteId = null;
 let pendingDeleteAll = false;
 let autoRefreshTimer = null;
 
@@ -39,7 +39,7 @@ document.getElementById("login-user").addEventListener("keydown", e => {
 function handleLogin() {
   const user = document.getElementById("login-user").value.trim();
   const pass = document.getElementById("login-pass").value.trim();
-  const err  = document.getElementById("login-error");
+  const err = document.getElementById("login-error");
 
   if (user === ADMIN_USER && pass === ADMIN_PASS) {
     document.getElementById("login-overlay").classList.add("hidden");
@@ -64,25 +64,25 @@ document.getElementById("logout-btn").addEventListener("click", () => {
 
 // ── SIDEBAR TOGGLE (mobile) ────────────────────────────────────
 function openSidebar() {
-  const sidebar  = document.getElementById('sidebar');
-  const overlay  = document.getElementById('sidebar-overlay');
-  const ham      = document.getElementById('admin-hamburger');
-  if (sidebar)  sidebar.classList.add('open');
-  if (overlay)  overlay.classList.add('open');
-  if (ham)      ham.classList.add('open');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const ham = document.getElementById('admin-hamburger');
+  if (sidebar) sidebar.classList.add('open');
+  if (overlay) overlay.classList.add('open');
+  if (ham) ham.classList.add('open');
 }
 function closeSidebar() {
-  const sidebar  = document.getElementById('sidebar');
-  const overlay  = document.getElementById('sidebar-overlay');
-  const ham      = document.getElementById('admin-hamburger');
-  if (sidebar)  sidebar.classList.remove('open');
-  if (overlay)  overlay.classList.remove('open');
-  if (ham)      ham.classList.remove('open');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const ham = document.getElementById('admin-hamburger');
+  if (sidebar) sidebar.classList.remove('open');
+  if (overlay) overlay.classList.remove('open');
+  if (ham) ham.classList.remove('open');
 }
 
-const adminHam     = document.getElementById('admin-hamburger');
-const sidebarOvl   = document.getElementById('sidebar-overlay');
-if (adminHam)   adminHam.addEventListener('click', (e) => { e.stopPropagation(); openSidebar(); });
+const adminHam = document.getElementById('admin-hamburger');
+const sidebarOvl = document.getElementById('sidebar-overlay');
+if (adminHam) adminHam.addEventListener('click', (e) => { e.stopPropagation(); openSidebar(); });
 if (sidebarOvl) sidebarOvl.addEventListener('click', closeSidebar);
 
 // Close sidebar when a nav item is clicked (mobile)
@@ -97,9 +97,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
 // ═══════════════════════════════════════════════════════════════
 const SECTIONS = ["dashboard", "bookings", "halls"];
 const TITLES = {
-  dashboard: ["Dashboard",       "Overview of all hall bookings"],
-  bookings:  ["All Bookings",    "Manage and control every booking"],
-  halls:     ["Hall Directory",  "View all available halls"],
+  dashboard: ["Dashboard", "Overview of all hall bookings"],
+  bookings: ["All Bookings", "Manage and control every booking"],
+  halls: ["Hall Directory", "View all available halls"],
 };
 
 SECTIONS.forEach(name => {
@@ -116,7 +116,7 @@ function switchSection(name) {
   });
   document.getElementById(`section-${name}`).classList.add("active");
   document.getElementById(`nav-${name}`).classList.add("active");
-  document.getElementById("page-title").textContent    = TITLES[name][0];
+  document.getElementById("page-title").textContent = TITLES[name][0];
   document.getElementById("page-subtitle").textContent = TITLES[name][1];
 }
 
@@ -145,16 +145,16 @@ async function startAdmin() {
 function initHallsUI() {
   const statsGrid = document.getElementById("stats-grid");
   const hallsGrid = document.getElementById("halls-grid");
-  
+
   if (!statsGrid || !hallsGrid) return;
-  
+
   const icons = ["mic-2", "presentation", "briefcase", "users", "map-pin", "monitor"];
   const colors = ["auditorium", "seminar", "conference", "auditorium", "seminar", "conference"];
-  
+
   Object.entries(HALLS).forEach(([id, hall]) => {
     const icon = icons[id % 6];
     const color = colors[id % 6];
-    
+
     statsGrid.insertAdjacentHTML('beforeend', `
       <div class="stat-card ${color}">
         <div class="stat-icon"><i data-lucide="${icon}"></i></div>
@@ -164,7 +164,7 @@ function initHallsUI() {
         </div>
       </div>
     `);
-    
+
     hallsGrid.insertAdjacentHTML('beforeend', `
       <div class="hall-card">
         <div class="hall-icon ${color}"><i data-lucide="${icon}"></i></div>
@@ -192,18 +192,18 @@ async function checkDbStatus() {
   const pill = document.getElementById("db-status-pill");
   const text = document.getElementById("db-status-text");
   try {
-    const res  = await fetch("/db-status");
+    const res = await fetch("/db-status");
     const data = await res.json();
     if (data.connected) {
-      pill.className   = "status-pill connected";
+      pill.className = "status-pill connected";
       text.textContent = "DB Connected";
     } else {
-      pill.className   = "status-pill disconnected";
+      pill.className = "status-pill disconnected";
       text.textContent = "DB Disconnected";
       showToast("DB Disconnected", "Whitelist your IP on MongoDB Atlas", "error");
     }
   } catch {
-    pill.className   = "status-pill disconnected";
+    pill.className = "status-pill disconnected";
     text.textContent = "DB Offline";
   }
 }
@@ -213,7 +213,7 @@ async function checkDbStatus() {
 // ═══════════════════════════════════════════════════════════════
 async function loadStats() {
   try {
-    const res  = await fetch("/admin/stats");
+    const res = await fetch("/admin/stats");
     const data = await res.json();
     if (data.error) return;
 
@@ -247,7 +247,7 @@ async function loadStats() {
 // ═══════════════════════════════════════════════════════════════
 async function loadBookings() {
   try {
-    const res  = await fetch("/bookings/all");
+    const res = await fetch("/bookings/all");
     const data = await res.json();
 
     if (!Array.isArray(data)) {
@@ -266,19 +266,19 @@ async function loadBookings() {
 // ═══════════════════════════════════════════════════════════════
 //  FILTERS
 // ═══════════════════════════════════════════════════════════════
-document.getElementById("search-input").addEventListener("input",  applyFilters);
-document.getElementById("filter-hall").addEventListener("change",  applyFilters);
-document.getElementById("filter-date").addEventListener("change",  applyFilters);
+document.getElementById("search-input").addEventListener("input", applyFilters);
+document.getElementById("filter-hall").addEventListener("change", applyFilters);
+document.getElementById("filter-date").addEventListener("change", applyFilters);
 
 function applyFilters() {
-  const query    = document.getElementById("search-input").value.toLowerCase().trim();
+  const query = document.getElementById("search-input").value.toLowerCase().trim();
   const hallFilt = document.getElementById("filter-hall").value;
   const dateFilt = document.getElementById("filter-date").value;
   const todayStr = new Date().toISOString().split("T")[0];
 
   let filtered = allBookings.filter(b => {
-    const name      = (HALLS[String(b.hallId)]?.name || "").toLowerCase();
-    const userName  = (b.userName  || "").toLowerCase();
+    const name = (HALLS[String(b.hallId)]?.name || "").toLowerCase();
+    const userName = (b.userName || "").toLowerCase();
     const userEmail = (b.userEmail || "").toLowerCase();
     const matchQ = !query ||
       name.includes(query) ||
@@ -289,9 +289,9 @@ function applyFilters() {
     const matchH = !hallFilt || String(b.hallId) === hallFilt;
 
     let matchD = true;
-    if (dateFilt === "today")    matchD = b.date === todayStr;
+    if (dateFilt === "today") matchD = b.date === todayStr;
     if (dateFilt === "upcoming") matchD = b.date >= todayStr;
-    if (dateFilt === "past")     matchD = b.date < todayStr;
+    if (dateFilt === "past") matchD = b.date < todayStr;
 
     return matchQ && matchH && matchD;
   });
@@ -304,12 +304,12 @@ function applyFilters() {
 //  RENDER TABLE (All Bookings section)
 // ═══════════════════════════════════════════════════════════════
 function renderTable(bookings) {
-  const tbody  = document.getElementById("bookings-tbody");
-  const empty  = document.getElementById("table-empty");
+  const tbody = document.getElementById("bookings-tbody");
+  const empty = document.getElementById("table-empty");
   const footer = document.getElementById("results-count");
 
   if (bookings.length === 0) {
-    tbody.innerHTML    = "";
+    tbody.innerHTML = "";
     empty.classList.remove("hidden");
     footer.textContent = "No bookings match your filters";
     return;
@@ -321,10 +321,10 @@ function renderTable(bookings) {
   const todayStr = new Date().toISOString().split("T")[0];
 
   tbody.innerHTML = bookings.map((b, i) => {
-    const isPast   = b.date < todayStr;
+    const isPast = b.date < todayStr;
     const hallName = HALLS[String(b.hallId)]?.name || `Hall ${b.hallId}`;
     const colors = ["auditorium", "seminar", "conference", "auditorium", "seminar", "conference"];
-    const cls      = colors[b.hallId % 6] || "auditorium";
+    const cls = colors[b.hallId % 6] || "auditorium";
     const userHtml = userCell(b);
     return `
       <tr id="row-${b._id}">
@@ -351,7 +351,7 @@ function renderTable(bookings) {
 // ═══════════════════════════════════════════════════════════════
 function renderRecent(bookings) {
   const container = document.getElementById("recent-bookings-table");
-  const recent    = [...bookings]
+  const recent = [...bookings]
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 5);
 
@@ -369,10 +369,10 @@ function renderRecent(bookings) {
       </thead>
       <tbody>
         ${recent.map((b, i) => {
-          const isPast   = b.date < todayStr;
-          const hallName = HALLS[String(b.hallId)] || `Hall ${b.hallId}`;
-          const cls      = HALL_CLASS[String(b.hallId)] || "h1";
-          return `
+    const isPast = b.date < todayStr;
+    const hallName = HALLS[String(b.hallId)] || `Hall ${b.hallId}`;
+    const cls = HALL_CLASS[String(b.hallId)] || "h1";
+    return `
             <tr id="drow-${b._id}">
               <td class="row-index">${i + 1}</td>
               <td><span class="hall-chip ${cls}">${hallName}</span></td>
@@ -385,7 +385,7 @@ function renderRecent(bookings) {
                 </button>
               </td>
             </tr>`;
-        }).join("")}
+  }).join("")}
       </tbody>
     </table>
   `;
@@ -395,10 +395,10 @@ function renderRecent(bookings) {
 // ═══════════════════════════════════════════════════════════════
 //  DELETE — Single
 // ═══════════════════════════════════════════════════════════════
-window.confirmDelete = function(id) {
-  pendingDeleteId  = id;
+window.confirmDelete = function (id) {
+  pendingDeleteId = id;
   pendingDeleteAll = false;
-  document.getElementById("modal-title").textContent   = "Delete Booking?";
+  document.getElementById("modal-title").textContent = "Delete Booking?";
   document.getElementById("modal-message").textContent = "This will permanently remove the booking. The action cannot be undone.";
   document.getElementById("confirm-modal").classList.remove("hidden");
 };
@@ -412,8 +412,8 @@ document.getElementById("delete-all-btn").addEventListener("click", () => {
     return;
   }
   pendingDeleteAll = true;
-  pendingDeleteId  = null;
-  document.getElementById("modal-title").textContent   = "Clear ALL Bookings?";
+  pendingDeleteId = null;
+  document.getElementById("modal-title").textContent = "Clear ALL Bookings?";
   document.getElementById("modal-message").textContent = `This will permanently delete all ${allBookings.length} bookings. This cannot be undone.`;
   document.getElementById("confirm-modal").classList.remove("hidden");
 });
@@ -428,7 +428,7 @@ document.getElementById("confirm-modal").addEventListener("click", e => {
 
 document.getElementById("modal-confirm").addEventListener("click", async () => {
   const confirmBtn = document.getElementById("modal-confirm");
-  confirmBtn.disabled    = true;
+  confirmBtn.disabled = true;
   confirmBtn.textContent = "Deleting...";
 
   const isAll = pendingDeleteAll;
@@ -442,13 +442,13 @@ document.getElementById("modal-confirm").addEventListener("click", async () => {
     await deleteSingle(idToDel);
   }
 
-  confirmBtn.disabled    = false;
+  confirmBtn.disabled = false;
   confirmBtn.textContent = "Delete";
 });
 
 function closeModal() {
   document.getElementById("confirm-modal").classList.add("hidden");
-  pendingDeleteId  = null;
+  pendingDeleteId = null;
   pendingDeleteAll = false;
 }
 
@@ -461,7 +461,7 @@ async function deleteSingle(id) {
   });
 
   try {
-    const res  = await fetch(`/bookings/${id}`, { method: "DELETE" });
+    const res = await fetch(`/bookings/${id}`, { method: "DELETE" });
     const data = await res.json();
 
     if (data.success) {
@@ -472,8 +472,8 @@ async function deleteSingle(id) {
         const row = document.getElementById(rowId);
         if (row) {
           row.style.transition = "opacity 0.25s, transform 0.25s";
-          row.style.opacity    = "0";
-          row.style.transform  = "translateX(10px)";
+          row.style.opacity = "0";
+          row.style.transform = "translateX(10px)";
         }
       });
 
@@ -491,7 +491,7 @@ async function deleteSingle(id) {
 // ── Delete all ────────────────────────────────────────────────
 async function deleteAll() {
   try {
-    const res  = await fetch("/admin/delete-all", { method: "POST" });
+    const res = await fetch("/admin/delete-all", { method: "POST" });
     const data = await res.json();
     showToast("Cleared ✓", `All bookings have been deleted.`, "success");
     await loadAll();
@@ -506,7 +506,7 @@ async function deleteAll() {
 
 // Renders a user identity cell: avatar + name + email
 function userCell(b) {
-  const name  = b.userName  || '';
+  const name = b.userName || '';
   const email = b.userEmail || '';
   if (!name && !email) {
     return `<span style="color:#94A3B8;font-style:italic;font-size:0.8rem;">Anonymous</span>`;
@@ -518,7 +518,7 @@ function userCell(b) {
                   color:#fff;font-weight:800;font-size:0.78rem;display:flex;align-items:center;
                   justify-content:center;flex-shrink:0;">${initial}</div>
       <div>
-        ${name  ? `<div style="font-weight:600;font-size:0.85rem;color:#ffffff;">${name}</div>` : ''}
+        ${name ? `<div style="font-weight:600;font-size:0.85rem;color:#ffffff;">${name}</div>` : ''}
         ${email ? `<div style="font-size:0.75rem;color:#64748B;">${email}</div>` : ''}
       </div>
     </div>`;
@@ -548,16 +548,16 @@ function renderMobileCards(bookings) {
   }
 
   const todayStr = new Date().toISOString().split('T')[0];
-  const colorMap = ['auditorium','seminar','conference','auditorium','seminar','conference'];
+  const colorMap = ['auditorium', 'seminar', 'conference', 'auditorium', 'seminar', 'conference'];
 
   container.innerHTML = bookings.map(b => {
-    const isPast   = b.date < todayStr;
+    const isPast = b.date < todayStr;
     const hallName = HALLS[String(b.hallId)]?.name || `Hall ${b.hallId}`;
-    const cls      = colorMap[b.hallId % 6] || 'auditorium';
-    const name     = b.userName  || '';
-    const email    = b.userEmail || '';
-    const initial  = name  ? name.charAt(0).toUpperCase()
-                   : email ? email.charAt(0).toUpperCase() : '?';
+    const cls = colorMap[b.hallId % 6] || 'auditorium';
+    const name = b.userName || '';
+    const email = b.userEmail || '';
+    const initial = name ? name.charAt(0).toUpperCase()
+      : email ? email.charAt(0).toUpperCase() : '?';
     return `
       <div class="mobile-booking-card" id="mbc-${b._id}">
         <div class="mbc-header">
@@ -586,7 +586,7 @@ function renderMobileCards(bookings) {
 
 function showToast(title, message, type = "success") {
   const container = document.getElementById("toast-container");
-  const toast     = document.createElement("div");
+  const toast = document.createElement("div");
   toast.className = `toast ${type}`;
 
   const icon = type === "success" ? "check-circle" : "alert-circle";

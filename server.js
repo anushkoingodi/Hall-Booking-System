@@ -8,9 +8,20 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "frontend")));
 
 // ── MongoDB Connection ──────────────────────────────────────────
-mongoose.connect("mongodb://anushkoingodi:eWpn8oJucmXQCEQ6@ac-bgpps8t-shard-00-00.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-01.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-02.onoe5sw.mongodb.net:27017/hallbooking?ssl=true&replicaSet=atlas-281qpd-shard-0&authSource=admin")
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.log("❌ MongoDB Error:", err.message));
+const MONGODB_URI = "mongodb://anushkoingodi:eWpn8oJucmXQCEQ6@ac-bgpps8t-shard-00-00.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-01.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-02.onoe5sw.mongodb.net:27017/hallbooking?ssl=true&replicaSet=atlas-281qpd-shard-0&authSource=admin";
+
+let isConnected = false;
+async function connectToDB() {
+  if (isConnected) return;
+  try {
+    await mongoose.connect(MONGODB_URI);
+    isConnected = true;
+    console.log("✅ MongoDB Connected");
+  } catch (err) {
+    console.log("❌ MongoDB Error:", err.message);
+    throw err;
+  }
+}
 
 // ── Schema ─────────────────────────────────────────────────────
 const bookingSchema = new mongoose.Schema({
@@ -63,30 +74,37 @@ const HALLS = {
 };
 
 // ── DB Status ──────────────────────────────────────────────────
-app.get("/db-status", (req, res) => {
-  const state = mongoose.connection.readyState;
-  res.json({ connected: state === 1, state });
+app.get("/db-status", async (req, res) => {
+  try {
+    await connectToDB();
+    const state = mongoose.connection.readyState;
+    res.json({ connected: state === 1, state });
+  } catch (err) {
+    res.json({ connected: false, state: 0, error: err.message });
+  }
 });
 
 // ── Get bookings (filtered by email if provided) ───────────────
 app.get("/bookings", async (req, res) => {
   try {
+    await connectToDB();
     const filter = {};
     if (req.query.email) filter.userEmail = req.query.email;
     const data = await Booking.find(filter).sort({ date: 1, time: 1 });
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "DB not connected. Whitelist your IP on MongoDB Atlas." });
+    res.status(500).json({ error: "DB not connected. Whitelist your IP on MongoDB Atlas.", details: err.message });
   }
 });
 
 // ── Get ALL bookings (for availability checks, no filter) ───────
 app.get("/bookings/all", async (req, res) => {
   try {
+    await connectToDB();
     const data = await Booking.find().sort({ date: 1, time: 1 });
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "DB not connected. Whitelist your IP on MongoDB Atlas." });
+    res.status(500).json({ error: "DB not connected. Whitelist your IP on MongoDB Atlas.", details: err.message });
   }
 });
 
@@ -115,6 +133,7 @@ app.post("/book", async (req, res) => {
   }
 
   try {
+    await connectToDB();
     // Overlap check: any existing booking on same hall+date where ranges intersect
     // Two ranges [s1,e1] and [s2,e2] overlap when s1 < e2 AND s2 < e1
     const conflict = await Booking.findOne({
@@ -154,6 +173,7 @@ app.post("/book", async (req, res) => {
 // ── Delete single booking ──────────────────────────────────────
 app.delete("/bookings/:id", async (req, res) => {
   try {
+    await connectToDB();
     const deleted = await Booking.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ success: false, message: "Booking not found." });
     res.json({ success: true, message: "Booking deleted." });
@@ -165,6 +185,7 @@ app.delete("/bookings/:id", async (req, res) => {
 // ── Backwards compat: POST delete (keep for old calls) ─────────
 app.post("/delete/:id", async (req, res) => {
   try {
+    await connectToDB();
     await Booking.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: "Deleted successfully" });
   } catch (err) {
@@ -175,6 +196,7 @@ app.post("/delete/:id", async (req, res) => {
 // ── Admin: Stats ───────────────────────────────────────────────
 app.get("/admin/stats", async (req, res) => {
   try {
+    await connectToDB();
     const total = await Booking.countDocuments();
     const byHall = await Booking.aggregate([
       { $group: { _id: "$hallId", count: { $sum: 1 } } }
@@ -190,6 +212,7 @@ app.get("/admin/stats", async (req, res) => {
 // ── Admin: Delete ALL bookings ─────────────────────────────────
 app.delete("/admin/bookings", async (req, res) => {
   try {
+    await connectToDB();
     const result = await Booking.deleteMany({});
     res.json({ success: true, message: `Deleted ${result.deletedCount} bookings.` });
   } catch (err) {
@@ -200,6 +223,7 @@ app.delete("/admin/bookings", async (req, res) => {
 // backwards compat
 app.post("/admin/delete-all", async (req, res) => {
   try {
+    await connectToDB();
     await Booking.deleteMany({});
     res.json({ success: true, message: "All bookings deleted" });
   } catch (err) {
