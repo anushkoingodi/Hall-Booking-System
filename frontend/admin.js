@@ -55,10 +55,41 @@ function handleLogin() {
 // ── LOGOUT ────────────────────────────────────────────────────
 document.getElementById("logout-btn").addEventListener("click", () => {
   clearInterval(autoRefreshTimer);
+  closeSidebar();
   document.getElementById("admin-layout").classList.add("hidden");
   document.getElementById("login-overlay").classList.remove("hidden");
   document.getElementById("login-user").value = "";
   document.getElementById("login-pass").value = "";
+});
+
+// ── SIDEBAR TOGGLE (mobile) ────────────────────────────────────
+function openSidebar() {
+  const sidebar  = document.getElementById('sidebar');
+  const overlay  = document.getElementById('sidebar-overlay');
+  const ham      = document.getElementById('admin-hamburger');
+  if (sidebar)  sidebar.classList.add('open');
+  if (overlay)  overlay.classList.add('open');
+  if (ham)      ham.classList.add('open');
+}
+function closeSidebar() {
+  const sidebar  = document.getElementById('sidebar');
+  const overlay  = document.getElementById('sidebar-overlay');
+  const ham      = document.getElementById('admin-hamburger');
+  if (sidebar)  sidebar.classList.remove('open');
+  if (overlay)  overlay.classList.remove('open');
+  if (ham)      ham.classList.remove('open');
+}
+
+const adminHam     = document.getElementById('admin-hamburger');
+const sidebarOvl   = document.getElementById('sidebar-overlay');
+if (adminHam)   adminHam.addEventListener('click', (e) => { e.stopPropagation(); openSidebar(); });
+if (sidebarOvl) sidebarOvl.addEventListener('click', closeSidebar);
+
+// Close sidebar when a nav item is clicked (mobile)
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    if (window.innerWidth < 768) setTimeout(closeSidebar, 150);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -497,6 +528,60 @@ function formatDate(dateStr) {
   return d.toLocaleDateString("en-IN", {
     weekday: "short", year: "numeric", month: "short", day: "numeric"
   });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MOBILE BOOKING CARDS
+// ═══════════════════════════════════════════════════════════════
+function renderMobileCards(bookings) {
+  const container = document.getElementById('mobile-bookings-list');
+  if (!container) return;
+
+  if (bookings.length === 0) {
+    container.innerHTML = `
+      <div class="mobile-empty">
+        <i data-lucide="inbox"></i>
+        <p>No bookings found</p>
+      </div>`;
+    lucide.createIcons();
+    return;
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const colorMap = ['auditorium','seminar','conference','auditorium','seminar','conference'];
+
+  container.innerHTML = bookings.map(b => {
+    const isPast   = b.date < todayStr;
+    const hallName = HALLS[String(b.hallId)]?.name || `Hall ${b.hallId}`;
+    const cls      = colorMap[b.hallId % 6] || 'auditorium';
+    const name     = b.userName  || '';
+    const email    = b.userEmail || '';
+    const initial  = name  ? name.charAt(0).toUpperCase()
+                   : email ? email.charAt(0).toUpperCase() : '?';
+    return `
+      <div class="mobile-booking-card" id="mbc-${b._id}">
+        <div class="mbc-header">
+          <span class="mbc-hall-chip ${cls}">${hallName}</span>
+          <span class="mbc-status ${isPast ? 'past' : ''}">${isPast ? 'Completed' : 'Booked'}</span>
+        </div>
+        <div class="mbc-body">
+          <div class="mbc-row"><i data-lucide="calendar"></i><span>${formatDate(b.date)}</span></div>
+          <div class="mbc-row"><i data-lucide="clock"></i><span>${b.time}</span></div>
+        </div>
+        <div class="mbc-user">
+          <div class="mbc-avatar">${initial}</div>
+          <div class="mbc-user-info">
+            <div class="mbc-user-name">${name || 'Anonymous'}</div>
+            <div class="mbc-user-email">${email}</div>
+          </div>
+          <button class="mbc-del-btn" id="mbc-del-${b._id}" onclick="confirmDelete('${b._id}')">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+
+  lucide.createIcons();
 }
 
 function showToast(title, message, type = "success") {

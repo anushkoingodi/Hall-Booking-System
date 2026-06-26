@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FF7034">
   <title>HallBook Admin — Control Panel</title>
   <meta name="description" content="Admin control panel for HallBook booking management system.">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -38,8 +39,11 @@
   <!-- ADMIN LAYOUT -->
   <div id="admin-layout" class="admin-layout hidden">
 
+    <!-- SIDEBAR OVERLAY (mobile) -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
     <!-- SIDEBAR -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo">
         <i data-lucide="building-2"></i>
         <span>Hall<b>Book</b></span>
@@ -78,14 +82,18 @@
 
       <!-- HEADER -->
       <header class="admin-header">
-        <div>
+        <!-- Hamburger (mobile only) -->
+        <button class="admin-hamburger" id="admin-hamburger" aria-label="Open sidebar">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="admin-header-center">
           <h1 id="page-title">Dashboard</h1>
           <p id="page-subtitle">Overview of all hall bookings</p>
         </div>
         <div class="header-actions">
           <div id="db-status-pill" class="status-pill checking">
             <span class="status-dot"></span>
-            <span id="db-status-text">Checking DB...</span>
+            <span id="db-status-text">Checking...</span>
           </div>
           <button id="refresh-btn" class="icon-btn" title="Refresh">
             <i data-lucide="refresh-cw"></i>
@@ -127,35 +135,38 @@
         <div class="table-toolbar">
           <div class="search-bar">
             <i data-lucide="search"></i>
-            <input id="search-input" type="text" placeholder="Search by hall, user, email, date or time...">
+            <input id="search-input" type="text" placeholder="Search by hall, user, date...">
           </div>
-          <div class="filter-group">
-            <select id="filter-hall">
-              <option value="">All Halls</option>
-              <option value="1">L F Rasquina Hall</option>
-              <option value="2">Robert Sequeria Hall</option>
-              <option value="3">Sanidhya Hall</option>
-              <option value="4">Magis Hall</option>
-              <option value="5">Arrupe Hall 1</option>
-              <option value="6">Arrupe Hall 2</option>
-              <option value="7">Arrupe Hall 3</option>
-              <option value="8">AV Room</option>
-              <option value="9">Joseph Willy Hall</option>
-              <option value="10">Eric Mathias</option>
-              <option value="11">Xavier Hall</option>
-            </select>
-            <select id="filter-date">
-              <option value="">All Dates</option>
-              <option value="today">Today</option>
-              <option value="upcoming">Upcoming</option>
-              <option value="past">Past</option>
-            </select>
+          <div class="filter-row">
+            <div class="filter-group">
+              <select id="filter-hall">
+                <option value="">All Halls</option>
+                <option value="1">L F Rasquina Hall</option>
+                <option value="2">Robert Sequeria Hall</option>
+                <option value="3">Sanidhya Hall</option>
+                <option value="4">Magis Hall</option>
+                <option value="5">Arrupe Hall 1</option>
+                <option value="6">Arrupe Hall 2</option>
+                <option value="7">Arrupe Hall 3</option>
+                <option value="8">AV Room</option>
+                <option value="9">Joseph Willy Hall</option>
+                <option value="10">Eric Mathias</option>
+                <option value="11">Xavier Hall</option>
+              </select>
+              <select id="filter-date">
+                <option value="">All Dates</option>
+                <option value="today">Today</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="past">Past</option>
+              </select>
+            </div>
+            <button id="delete-all-btn" class="danger-btn">
+              <i data-lucide="trash-2"></i> Clear All
+            </button>
           </div>
-          <button id="delete-all-btn" class="danger-btn">
-            <i data-lucide="trash-2"></i> Clear All
-          </button>
         </div>
 
+        <!-- Desktop table -->
         <div class="table-card">
           <table class="bookings-table">
             <thead>
@@ -178,6 +189,12 @@
             <p>No bookings found</p>
           </div>
         </div>
+
+        <!-- Mobile booking cards (shown on small screens) -->
+        <div class="mobile-bookings-list" id="mobile-bookings-list">
+          <!-- Injected by JS -->
+        </div>
+
         <div id="table-footer" class="table-footer">
           <span id="results-count"></span>
         </div>
