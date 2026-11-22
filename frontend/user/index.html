@@ -69,7 +69,7 @@
           <!-- Email -->
           <div class="ob-form-group">
             <label class="ob-label" for="ob-email">
-              Email ID <span class="req">*</span>
+              College Email ID <span class="req">*</span>
             </label>
             <div style="position:relative">
               <svg class="ob-input-icon" width="16" height="16" viewBox="0 0 24 24"
@@ -78,9 +78,9 @@
                 <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
               </svg>
               <input class="ob-input ob-input-has-icon" type="email" id="ob-email"
-                     placeholder="you@example.com" autocomplete="email" required>
+                     placeholder="you@staloysius.edu.in" autocomplete="email" required>
             </div>
-            <div class="ob-error-msg" id="ob-email-err">Please enter a valid email address.</div>
+            <div class="ob-error-msg" id="ob-email-err">Please use your official college email ID to register.</div>
           </div>
 
           <!-- Department & Phone (side by side) -->
@@ -421,17 +421,21 @@
           location.reload();
         });
 
-        // If user already saved details, skip onboarding & show chip
+        // Domain validation helper for @staloysius.edu.in
+        function isCollegeEmail(v) {
+          if (!v || typeof v !== 'string') return false;
+          const clean = v.trim().toLowerCase();
+          return /^[a-zA-Z0-9._%+-]+@staloysius\.edu\.in$/.test(clean);
+        }
+
+        // If user already saved details, verify domain is valid, otherwise re-prompt
         const saved = JSON.parse(sessionStorage.getItem('hb_user') || 'null');
-        if (saved && saved.name && saved.email) {
+        if (saved && saved.name && saved.email && isCollegeEmail(saved.email)) {
           overlay.classList.add('hidden');
           updateNavChip(saved);
         } else {
+          sessionStorage.removeItem('hb_user');
           nameInput.focus();
-        }
-
-        function validateEmail(v) {
-          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
         }
 
         function clearError(input, errEl) {
@@ -442,9 +446,13 @@
         nameInput.addEventListener('input',  () => clearError(nameInput,  nameErr));
         emailInput.addEventListener('input', () => clearError(emailInput, emailErr));
 
-        form.addEventListener('submit', function (e) {
+        form.addEventListener('submit', async function (e) {
           e.preventDefault();
           let valid = true;
+
+          // Convert email address to lowercase before validation
+          const rawEmail = emailInput.value.trim().toLowerCase();
+          emailInput.value = rawEmail;
 
           // Validate name
           if (!nameInput.value.trim()) {
@@ -455,9 +463,15 @@
             clearError(nameInput, nameErr);
           }
 
-          // Validate email
-          if (!validateEmail(emailInput.value)) {
+          // Validate email domain
+          if (!rawEmail) {
             emailInput.classList.add('ob-error');
+            emailErr.textContent = "Please enter your college email ID.";
+            emailErr.classList.add('visible');
+            valid = false;
+          } else if (!isCollegeEmail(rawEmail)) {
+            emailInput.classList.add('ob-error');
+            emailErr.textContent = "Please use your official college email ID to register.";
             emailErr.classList.add('visible');
             valid = false;
           } else {
@@ -466,13 +480,40 @@
 
           if (!valid) return;
 
-          // Save to sessionStorage (session-scoped — each user gets their own session)
+          // Prepare user data
           const userData = {
             name:  nameInput.value.trim(),
-            email: emailInput.value.trim(),
+            email: rawEmail,
             dept:  deptInput.value.trim(),
             phone: phoneInput.value.trim()
           };
+
+          // Validate on backend API endpoint
+          submitBtn.disabled = true;
+          const originalBtnHtml = submitBtn.innerHTML;
+          submitBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> Verifying...';
+
+          try {
+            const res = await fetch('/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(userData)
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = originalBtnHtml;
+              emailInput.classList.add('ob-error');
+              emailErr.textContent = data.message || "Please use your official college email ID to register.";
+              emailErr.classList.add('visible');
+              return;
+            }
+          } catch (err) {
+            // If offline, continue since frontend already verified domain
+            console.warn('Backend verification notice:', err);
+          }
+
+          // Save to sessionStorage (session-scoped — each user gets their own session)
           sessionStorage.setItem('hb_user', JSON.stringify(userData));
 
           // Update navbar user chip

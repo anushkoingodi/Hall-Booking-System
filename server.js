@@ -3,8 +3,33 @@ const mongoose = require("mongoose");
 const app = express();
 
 const path = require("path");
+const fs = require("fs");
+
+// Load environment variables (.env)
+try {
+  if (typeof process.loadEnvFile === "function") {
+    const envPath = path.join(__dirname, ".env");
+    if (fs.existsSync(envPath)) {
+      process.loadEnvFile(envPath);
+    }
+  }
+} catch (e) {
+  // Ignore if already loaded or missing
+}
 
 app.use(express.json());
+
+// ── College Email Domain Configuration ──────────────────────────
+const ALLOWED_EMAIL_DOMAIN = (process.env.ALLOWED_EMAIL_DOMAIN || "staloysius.edu.in").toLowerCase().trim();
+
+function isCollegeEmail(email) {
+  if (!email || typeof email !== "string") return false;
+  const clean = email.trim().toLowerCase();
+  const domain = `@${ALLOWED_EMAIL_DOMAIN}`;
+  if (!clean.endsWith(domain)) return false;
+  const regex = /^[a-zA-Z0-9._%+-]+@staloysius\.edu\.in$/;
+  return regex.test(clean);
+}
 
 // ── Static Files ────────────────────────────────────────────────
 // Admin portal: http://localhost:5000/admin
@@ -17,13 +42,13 @@ app.use(express.static(path.join(__dirname, "frontend", "user")));
 app.get("/admin.html", (req, res) => res.redirect("/admin"));
 
 // ── MongoDB Connection ──────────────────────────────────────────
-const MONGODB_URI = "mongodb://anushkoingodi:eWpn8oJucmXQCEQ6@ac-bgpps8t-shard-00-00.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-01.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-02.onoe5sw.mongodb.net:27017/hallbooking?ssl=true&replicaSet=atlas-281qpd-shard-0&authSource=admin";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://anushkoingodi:eWpn8oJucmXQCEQ6@ac-bgpps8t-shard-00-00.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-01.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-02.onoe5sw.mongodb.net:27017/hallbooking?ssl=true&replicaSet=atlas-281qpd-shard-0&authSource=admin";
 
 let isConnected = false;
 async function connectToDB() {
   if (isConnected) return;
   try {
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
     isConnected = true;
     console.log("✅ MongoDB Connected");
   } catch (err) {
@@ -32,7 +57,7 @@ async function connectToDB() {
   }
 }
 
-// ── Schema ─────────────────────────────────────────────────────
+// ── Schemas ───────────────────────────────────────────────────
 const bookingSchema = new mongoose.Schema({
   hallId:    { type: Number, required: true },
   date:      { type: String, required: true },
@@ -45,6 +70,16 @@ const bookingSchema = new mongoose.Schema({
 });
 
 const Booking = mongoose.model("Booking", bookingSchema);
+
+const userSchema = new mongoose.Schema({
+  name:         { type: String, required: true },
+  email:        { type: String, required: true, unique: true, lowercase: true, trim: true },
+  dept:         { type: String, default: "" },
+  phone:        { type: String, default: "" },
+  registeredAt: { type: Date, default: Date.now }
+});
+
+const User = mongoose.model("User", userSchema);
 
 // ── Time helpers ───────────────────────────────────────────────
 // Converts "09:00 AM" or "09:00" to minutes from midnight
@@ -93,12 +128,138 @@ app.get("/db-status", async (req, res) => {
   }
 });
 
+// ── Auth: Register ─────────────────────────────────────────────
+app.post(["/register", "/api/register"], async (req, res) => {
+  const { name, email, dept, phone } = req.body;
+
+  if (!email || typeof email !== "string") {
+    return res.status(400).json({ success: false, message: "Please enter your email address." });
+  }
+
+  // Convert email address to lowercase before validation
+  const cleanEmail = email.trim().toLowerCase();
+
+  // Validate college email domain
+  if (!isCollegeEmail(cleanEmail)) {
+    return res.status(400).json({
+      success: false,
+      message: "Please use your official college email ID to register."
+    });
+  }
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ success: false, message: "Please enter your full name." });
+  }
+
+  try {
+    await connectToDB();
+    let user = await User.findOne({ email: cleanEmail });
+    if (user) {
+      user.name = name.trim();
+      if (dept !== undefined) user.dept = dept.trim();
+      if (phone !== undefined) user.phone = phone.trim();
+      await user.save();
+    } else {
+      user = new User({
+        name: name.trim(),
+        email: cleanEmail,
+        dept: dept ? dept.trim() : "",
+        phone: phone ? phone.trim() : ""
+      });
+      await user.save();
+    }
+
+    res.json({
+      success: true,
+      message: "Registration successful.",
+      user: {
+        name: user.name,
+        email: user.email,
+        dept: user.dept,
+        phone: user.phone
+      }
+    });
+  } catch (err) {
+    // Graceful fallback if database is currently unreachable
+    res.json({
+      success: true,
+      message: "Registration successful.",
+      user: {
+        name: name.trim(),
+        email: cleanEmail,
+        dept: (dept || "").trim(),
+        phone: (phone || "").trim()
+      }
+    });
+  }
+});
+
+// ── Auth: Login ────────────────────────────────────────────────
+app.post(["/login", "/api/login"], async (req, res) => {
+  const { email } = req.body;
+
+  if (!email || typeof email !== "string") {
+    return res.status(400).json({ success: false, message: "Please enter your email address." });
+  }
+
+  // Convert email address to lowercase before validation
+  const cleanEmail = email.trim().toLowerCase();
+
+  // Validate college email domain
+  if (!isCollegeEmail(cleanEmail)) {
+    return res.status(400).json({
+      success: false,
+      message: "Please use your official college email ID to log in."
+    });
+  }
+
+  try {
+    await connectToDB();
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "No user found with this email. Please register first."
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Login successful.",
+      user: {
+        name: user.name,
+        email: user.email,
+        dept: user.dept,
+        phone: user.phone
+      }
+    });
+  } catch (err) {
+    // If DB is unreachable, return valid status for authorized college email
+    res.json({
+      success: true,
+      message: "Login successful.",
+      user: {
+        email: cleanEmail,
+        name: cleanEmail.split("@")[0]
+      }
+    });
+  }
+});
+
 // ── Get bookings (filtered by email if provided) ───────────────
 app.get("/bookings", async (req, res) => {
   try {
     await connectToDB();
     const filter = {};
-    if (req.query.email) filter.userEmail = req.query.email;
+    if (req.query.email) {
+      const cleanEmail = req.query.email.trim().toLowerCase();
+      if (!isCollegeEmail(cleanEmail)) {
+        return res.status(400).json({
+          error: "Invalid email domain. Please use your official college email ID."
+        });
+      }
+      filter.userEmail = cleanEmail;
+    }
     const data = await Booking.find(filter).sort({ date: 1, time: 1 });
     res.json(data);
   } catch (err) {
@@ -123,6 +284,17 @@ app.post("/book", async (req, res) => {
 
   if (!hallId || !date || !time) {
     return res.status(400).json({ success: false, message: "Missing required fields." });
+  }
+
+  // Validate college email domain on booking
+  if (userEmail) {
+    const cleanEmail = userEmail.trim().toLowerCase();
+    if (!isCollegeEmail(cleanEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please use your official college email ID to book a hall."
+      });
+    }
   }
 
   if (!HALLS[hallId]) {
@@ -241,9 +413,10 @@ app.post("/admin/delete-all", async (req, res) => {
 });
 
 // ── Start server ───────────────────────────────────────────────
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(5000, () => {
-    console.log("🚀 Server running on http://localhost:5000");
+if (process.env.NODE_ENV !== 'production' && require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
   });
 }
 

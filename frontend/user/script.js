@@ -458,7 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // attach current user info
     const currentUser = getCurrentUser();
-    const userEmail   = currentUser ? currentUser.email : '';
+    const userEmail   = currentUser ? (currentUser.email || '').trim().toLowerCase() : '';
     const userName    = currentUser ? currentUser.name  : '';
 
     setLoading(true);
@@ -507,7 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadBookings() {
     try {
       const currentUser = getCurrentUser();
-      const email = currentUser ? encodeURIComponent(currentUser.email) : '';
+      const email = currentUser && currentUser.email ? encodeURIComponent(currentUser.email.trim().toLowerCase()) : '';
       const url   = email ? `/bookings?email=${email}` : '/bookings';
       const res   = await fetch(url);
       const data  = await res.json();
