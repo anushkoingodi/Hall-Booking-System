@@ -5,7 +5,16 @@ const app = express();
 const path = require("path");
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "frontend")));
+
+// ── Static Files ────────────────────────────────────────────────
+// Admin portal: http://localhost:5000/admin
+app.use("/admin", express.static(path.join(__dirname, "frontend", "admin")));
+// User portal: http://localhost:5000/ or http://localhost:5000/user
+app.use("/user", express.static(path.join(__dirname, "frontend", "user")));
+app.use(express.static(path.join(__dirname, "frontend", "user")));
+
+// Redirect /admin.html to /admin for backwards compatibility
+app.get("/admin.html", (req, res) => res.redirect("/admin"));
 
 // ── MongoDB Connection ──────────────────────────────────────────
 const MONGODB_URI = "mongodb://anushkoingodi:eWpn8oJucmXQCEQ6@ac-bgpps8t-shard-00-00.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-01.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-02.onoe5sw.mongodb.net:27017/hallbooking?ssl=true&replicaSet=atlas-281qpd-shard-0&authSource=admin";
