@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#FF7034">
-    <title>HallBook — Book Your Perfect Hall</title>
-    <meta name="description" content="Book seminar halls, auditoriums and conference rooms instantly with HallBook.">
+    <title>HallSync — Book Your Perfect Hall</title>
+    <meta name="description" content="Book seminar halls, auditoriums and conference rooms instantly with HallSync.">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -22,29 +22,19 @@
          STEP 1 — USER DETAILS ONBOARDING
     ══════════════════════════════════════════════════════════ -->
     <div id="user-onboarding">
-      <!-- Background blobs -->
-      <div class="ob-blob ob-blob-1"></div>
-      <div class="ob-blob ob-blob-2"></div>
-
       <div class="onboarding-card">
 
-        <!-- Logo -->
-        <div class="ob-logo">
-          <div class="ob-logo-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/>
-              <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
-              <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
-              <path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
-            </svg>
+        <!-- Header: Logo & Step Badge -->
+        <div class="ob-header">
+          <div class="ob-logo">
+            <span class="logo-hall">Hall</span> <span class="logo-sync">sync</span>
           </div>
-          Hall<span>Book</span>
+          <div class="ob-step-badge">Step 1 of 2</div>
         </div>
 
         <!-- Heading -->
-        <h1 class="ob-heading">Welcome! Let's get<br>you set up 👋</h1>
-        <p class="ob-subheading">Tell us a bit about yourself to continue booking halls.</p>
+        <h1 class="ob-heading">Complete Your Profile</h1>
+        <p class="ob-subheading">Please provide your details to access the hall booking system.</p>
 
         <!-- Form -->
         <form id="user-details-form" novalidate>
@@ -52,14 +42,10 @@
           <!-- Full Name -->
           <div class="ob-form-group">
             <label class="ob-label" for="ob-name">
-              Full Name <span class="req">*</span>
+              FULL NAME <span class="req">*</span>
             </label>
-            <div style="position:relative">
-              <svg class="ob-input-icon" width="16" height="16" viewBox="0 0 24 24"
-                   fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
+            <div class="ob-input-wrap">
+              <i data-lucide="user" class="ob-input-icon"></i>
               <input class="ob-input ob-input-has-icon" type="text" id="ob-name"
                      placeholder="e.g. John Doe" autocomplete="name" required>
             </div>
@@ -69,14 +55,10 @@
           <!-- Email -->
           <div class="ob-form-group">
             <label class="ob-label" for="ob-email">
-              College Email ID <span class="req">*</span>
+              OFFICIAL COLLEGE EMAIL <span class="req">*</span>
             </label>
-            <div style="position:relative">
-              <svg class="ob-input-icon" width="16" height="16" viewBox="0 0 24 24"
-                   fill="none" stroke="currentColor" stroke-width="2">
-                <rect width="20" height="16" x="2" y="4" rx="2"/>
-                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-              </svg>
+            <div class="ob-input-wrap">
+              <i data-lucide="mail" class="ob-input-icon"></i>
               <input class="ob-input ob-input-has-icon" type="email" id="ob-email"
                      placeholder="you@staloysius.edu.in" autocomplete="email" required>
             </div>
@@ -87,13 +69,9 @@
           <div class="ob-form-row">
             <!-- Department -->
             <div class="ob-form-group">
-              <label class="ob-label" for="ob-dept">Department</label>
-              <div style="position:relative">
-                <svg class="ob-input-icon" width="16" height="16" viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" stroke-width="2">
-                  <rect width="20" height="14" x="2" y="7" rx="2"/>
-                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-                </svg>
+              <label class="ob-label" for="ob-dept">DEPARTMENT</label>
+              <div class="ob-input-wrap">
+                <i data-lucide="graduation-cap" class="ob-input-icon"></i>
                 <input class="ob-input ob-input-has-icon" type="text" id="ob-dept"
                        placeholder="e.g. CSE" autocomplete="organization">
               </div>
@@ -101,37 +79,27 @@
 
             <!-- Phone (optional) -->
             <div class="ob-form-group">
-              <label class="ob-label" for="ob-phone">Phone <span style="opacity:.5;font-size:.7rem;text-transform:none;letter-spacing:0">(optional)</span></label>
-              <div style="position:relative">
-                <svg class="ob-input-icon" width="16" height="16" viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-                </svg>
+              <label class="ob-label" for="ob-phone">PHONE NUMBER</label>
+              <div class="ob-input-wrap">
+                <i data-lucide="phone" class="ob-input-icon"></i>
                 <input class="ob-input ob-input-has-icon" type="tel" id="ob-phone"
-                       placeholder="+91 98765 43210" autocomplete="tel">
+                       placeholder="Enter phone number" autocomplete="tel">
               </div>
             </div>
           </div>
 
+          <button type="submit" class="ob-btn" id="ob-submit">
+            Continue <i data-lucide="arrow-right"></i>
+          </button>
+
           <hr class="ob-divider">
 
-          <button type="submit" class="ob-btn" id="ob-submit">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2.5">
-              <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
-            </svg>
-            Continue to Hall Booking
-          </button>
-        </form>
+          <div class="ob-privacy">
+            <i data-lucide="shield-check" class="ob-privacy-icon"></i>
+            <span>Your information is used to manage your hall bookings.</span>
+          </div>
 
-        <div class="ob-privacy">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="2">
-            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-          Your details are stored locally and never shared.
-        </div>
+        </form>
 
       </div><!-- /.onboarding-card -->
     </div><!-- /#user-onboarding -->
@@ -160,7 +128,7 @@
               <span></span><span></span><span></span>
             </button>
 
-            <a href="#" class="logo"><i data-lucide="building-2"></i>Hall<span>Book</span></a>
+            <a href="#" class="logo"><i data-lucide="building-2"></i>Hall<span>sync</span></a>
 
             <!-- Desktop nav links -->
             <div class="nav-links">
@@ -184,7 +152,7 @@
                       <div class="pd-big-avatar" id="pd-avatar">?</div>
                       <div class="pd-header-info">
                         <div class="pd-full-name" id="pd-full-name">—</div>
-                        <div class="pd-tag">HallBook Member</div>
+                        <div class="pd-tag">HallSync Member</div>
                       </div>
                     </div>
                     <div class="pd-body">
@@ -491,7 +459,7 @@
           // Validate on backend API endpoint
           submitBtn.disabled = true;
           const originalBtnHtml = submitBtn.innerHTML;
-          submitBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> Verifying...';
+          submitBtn.innerHTML = 'Verifying...';
 
           try {
             const res = await fetch('/register', {
@@ -521,7 +489,7 @@
 
           // Animate out
           submitBtn.disabled = true;
-          submitBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> Getting started...';
+          submitBtn.innerHTML = 'Getting started...';
           overlay.classList.add('fade-out');
           setTimeout(() => overlay.classList.add('hidden'), 520);
         });
