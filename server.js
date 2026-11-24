@@ -5,7 +5,27 @@ const app = express();
 const path = require("path");
 
 app.use(express.json());
+
+// ── Static Files & Routes ───────────────────────────────────────
+// Set COMING_SOON to "false" to restore the main booking site as the public homepage
+const COMING_SOON_MODE = process.env.COMING_SOON !== "false";
+
+if (COMING_SOON_MODE) {
+  // 1. Public Homepage: Serves the Coming Soon landing page at /
+  app.use(express.static(path.join(__dirname, "comming-soon-page")));
+
+  // 2. Preserved Booking System: Accessible via /booking or /app
+  app.use("/booking", express.static(path.join(__dirname, "frontend")));
+  app.use("/app", express.static(path.join(__dirname, "frontend")));
+}
+
+// 3. Fallback static serving (admin.html, admin assets, or full frontend if coming soon is off)
 app.use(express.static(path.join(__dirname, "frontend")));
+
+// 4. Admin Portal helper route
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "frontend", "admin.html"));
+});
 
 // ── MongoDB Connection ──────────────────────────────────────────
 const MONGODB_URI = "mongodb://anushkoingodi:eWpn8oJucmXQCEQ6@ac-bgpps8t-shard-00-00.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-01.onoe5sw.mongodb.net:27017,ac-bgpps8t-shard-00-02.onoe5sw.mongodb.net:27017/hallbooking?ssl=true&replicaSet=atlas-281qpd-shard-0&authSource=admin";
