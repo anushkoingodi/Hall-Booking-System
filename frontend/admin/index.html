@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#FF7034">
-  <title>HallBook Admin — Control Panel</title>
-  <meta name="description" content="Admin control panel for HallBook booking management system.">
+  <title>HallSync Admin — Control Panel</title>
+  <meta name="description" content="Admin control panel for HallSync booking management system.">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -18,22 +18,53 @@
   <!-- LOGIN OVERLAY -->
   <div id="login-overlay" class="login-overlay">
     <div class="login-card">
-      <div class="login-logo">
-        <i data-lucide="shield-check"></i>
+
+      <!-- Header: Logo & Badge -->
+      <div class="login-header">
+        <div class="login-brand">
+          <span class="logo-hall">Hall</span> <span class="logo-sync">sync</span>
+        </div>
+        <div class="login-badge">Admin Access</div>
       </div>
-      <h2>Admin Access</h2>
-      <p>Enter your credentials to continue</p>
+
+      <!-- Heading & Subheading -->
+      <h1 class="login-title">Admin Sign In</h1>
+      <p class="login-subtitle">Enter your credentials to access the admin dashboard.</p>
+
+      <!-- Form -->
       <div class="login-form">
-        <div class="login-field">
-          <i data-lucide="user"></i>
-          <input id="login-user" type="text" placeholder="Username" autocomplete="off">
+        <!-- Username -->
+        <div class="login-form-group">
+          <label class="login-label" for="login-user">USERNAME <span class="req">*</span></label>
+          <div class="login-input-wrap">
+            <i data-lucide="user" class="login-input-icon"></i>
+            <input id="login-user" class="login-input" type="text" placeholder="e.g. admin" autocomplete="username" required>
+          </div>
         </div>
-        <div class="login-field">
-          <i data-lucide="lock"></i>
-          <input id="login-pass" type="password" placeholder="Password">
+
+        <!-- Password -->
+        <div class="login-form-group">
+          <label class="login-label" for="login-pass">PASSWORD <span class="req">*</span></label>
+          <div class="login-input-wrap">
+            <i data-lucide="lock" class="login-input-icon"></i>
+            <input id="login-pass" class="login-input" type="password" placeholder="Enter password" autocomplete="current-password" required>
+          </div>
         </div>
-        <div id="login-error" class="login-error hidden">❌ Invalid credentials</div>
-        <button id="login-btn" class="login-btn">Sign In <i data-lucide="arrow-right"></i></button>
+
+        <!-- Error Message -->
+        <div id="login-error" class="login-error hidden">❌ Invalid username or password</div>
+
+        <!-- Submit Button -->
+        <button id="login-btn" class="login-btn" type="button">
+          Sign In <i data-lucide="arrow-right"></i>
+        </button>
+
+        <hr class="login-divider">
+
+        <div class="login-footer-note">
+          <i data-lucide="shield-check" class="login-footer-icon"></i>
+          <span>Authorized personnel only. All access is monitored.</span>
+        </div>
       </div>
     </div>
   </div>
@@ -48,7 +79,7 @@
         <aside class="sidebar" id="sidebar">
           <div class="sidebar-logo">
             <i data-lucide="building-2"></i>
-            <span>Hall<b>Book</b></span>
+            <span>Hall<b>sync</b></span>
             <span class="admin-badge">ADMIN</span>
           </div>
 
