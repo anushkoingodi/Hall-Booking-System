@@ -87,6 +87,10 @@
             <a href="#" class="nav-item active" data-section="dashboard" id="nav-dashboard">
               <i data-lucide="layout-dashboard"></i> Dashboard
             </a>
+            <a href="#" class="nav-item" data-section="requests" id="nav-requests">
+              <i data-lucide="check-square"></i> Accept / Reject
+              <span class="nav-badge pending-badge" id="sidebar-pending-count">0</span>
+            </a>
             <a href="#" class="nav-item" data-section="bookings" id="nav-bookings">
               <i data-lucide="calendar-check"></i> All Bookings
               <span class="nav-badge" id="sidebar-count">0</span>
@@ -144,6 +148,27 @@
                   <div class="stat-label">Total Bookings</div>
                 </div>
               </div>
+              <div class="stat-card pending-stat">
+                <div class="stat-icon"><i data-lucide="clock-3"></i></div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-pending">—</div>
+                  <div class="stat-label">Pending Approval</div>
+                </div>
+              </div>
+              <div class="stat-card approved-stat">
+                <div class="stat-icon"><i data-lucide="check-circle-2"></i></div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-approved">—</div>
+                  <div class="stat-label">Approved</div>
+                </div>
+              </div>
+              <div class="stat-card rejected-stat">
+                <div class="stat-icon"><i data-lucide="x-circle"></i></div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-rejected">—</div>
+                  <div class="stat-label">Rejected</div>
+                </div>
+              </div>
               <div class="stat-card today">
                 <div class="stat-icon"><i data-lucide="clock"></i></div>
                 <div class="stat-info">
@@ -163,15 +188,79 @@
             </div>
           </section>
 
-          <!-- BOOKINGS SECTION -->
+          <!-- ACCEPT / REJECT REQUESTS SECTION (Separate Dedicated Space) -->
+          <section id="section-requests" class="section">
+            <div class="table-toolbar">
+              <div class="search-bar">
+                <i data-lucide="search"></i>
+                <input id="req-search-input" type="text" placeholder="Search requests by hall, lecturer, event, department...">
+              </div>
+              <div class="filter-row">
+                <div class="filter-group">
+                  <select id="req-filter-hall">
+                    <option value="">All Halls</option>
+                    <option value="1">L F Rasquina Hall</option>
+                    <option value="2">Robert Sequeria Hall</option>
+                    <option value="3">Sanidhya Hall</option>
+                    <option value="4">Magis Hall</option>
+                    <option value="5">Arrupe Hall 1</option>
+                    <option value="6">Arrupe Hall 2</option>
+                    <option value="7">Arrupe Hall 3</option>
+                    <option value="8">AV Room</option>
+                    <option value="9">Joseph Willy Hall</option>
+                    <option value="10">Eric Mathias</option>
+                    <option value="11">Xavier Hall</option>
+                  </select>
+                  <select id="req-filter-date">
+                    <option value="">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="upcoming">Upcoming</option>
+                    <option value="past">Past</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Booking Filter Quick Tabs -->
+            <div class="status-tabs-container">
+              <button class="status-tab active" data-status="">All <span class="tab-badge" id="tab-badge-all">0</span></button>
+              <button class="status-tab tab-pending" data-status="Pending">Pending <span class="tab-badge" id="tab-badge-pending">0</span></button>
+              <button class="status-tab tab-approved" data-status="Approved">Approved <span class="tab-badge" id="tab-badge-approved">0</span></button>
+              <button class="status-tab tab-rejected" data-status="Rejected">Rejected <span class="tab-badge" id="tab-badge-rejected">0</span></button>
+            </div>
+
+            <!-- Individual Booking Cards Grid -->
+            <div class="booking-cards-grid" id="booking-cards-grid">
+              <div class="loading-cards">
+                <span class="spinner"></span> Loading booking requests...
+              </div>
+            </div>
+
+            <div id="req-empty" class="table-empty hidden">
+              <i data-lucide="inbox"></i>
+              <p>No booking requests match your filters</p>
+            </div>
+
+            <div id="req-footer" class="table-footer">
+              <span id="req-results-count"></span>
+            </div>
+          </section>
+
+          <!-- BOOKINGS SECTION (All Bookings Table & Mobile List) -->
           <section id="section-bookings" class="section">
             <div class="table-toolbar">
               <div class="search-bar">
                 <i data-lucide="search"></i>
-                <input id="search-input" type="text" placeholder="Search by hall, user, date...">
+                <input id="search-input" type="text" placeholder="Search by hall, lecturer, event, department...">
               </div>
               <div class="filter-row">
                 <div class="filter-group">
+                  <select id="filter-status" class="filter-status-select">
+                    <option value="">All Statuses</option>
+                    <option value="Pending">⏳ Pending</option>
+                    <option value="Approved">✅ Approved</option>
+                    <option value="Rejected">❌ Rejected</option>
+                  </select>
                   <select id="filter-hall">
                     <option value="">All Halls</option>
                     <option value="1">L F Rasquina Hall</option>
@@ -206,6 +295,7 @@
                   <tr>
                     <th>#</th>
                     <th>Hall</th>
+                    <th>Event</th>
                     <th>Date</th>
                     <th>Time Slot</th>
                     <th>Booked By</th>
@@ -215,7 +305,7 @@
                 </thead>
                 <tbody id="bookings-tbody">
                   <tr>
-                    <td colspan="7" class="loading-row"><span class="spinner"></span> Loading bookings...</td>
+                    <td colspan="8" class="loading-row"><span class="spinner"></span> Loading bookings...</td>
                   </tr>
                 </tbody>
               </table>

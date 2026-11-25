@@ -21,6 +21,7 @@ let allBookings = [];
 let pendingDeleteId = null;
 let pendingDeleteAll = false;
 let autoRefreshTimer = null;
+let currentStatusFilter = "";
 
 // ── Bootstrap ─────────────────────────────────────────────────
 lucide.createIcons();
@@ -95,10 +96,11 @@ document.querySelectorAll('.nav-item').forEach(item => {
 // ═══════════════════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════════
-const SECTIONS = ["dashboard", "bookings", "halls"];
+const SECTIONS = ["dashboard", "requests", "bookings", "halls"];
 const TITLES = {
   dashboard: ["Dashboard", "Overview of all hall bookings"],
-  bookings: ["All Bookings", "Manage and control every booking"],
+  requests: ["Accept / Reject", "Review booking requests and approve or reject"],
+  bookings: ["All Bookings", "Complete list of all hall bookings"],
   halls: ["Hall Directory", "View all available halls"],
 };
 
@@ -217,8 +219,11 @@ async function loadStats() {
     const data = await res.json();
     if (data.error) return;
 
-    document.getElementById("stat-total").textContent = data.total;
-    document.getElementById("stat-today").textContent = data.todayCount;
+    if (document.getElementById("stat-total")) document.getElementById("stat-total").textContent = data.total || 0;
+    if (document.getElementById("stat-pending")) document.getElementById("stat-pending").textContent = data.pendingCount || 0;
+    if (document.getElementById("stat-approved")) document.getElementById("stat-approved").textContent = data.approvedCount || 0;
+    if (document.getElementById("stat-rejected")) document.getElementById("stat-rejected").textContent = data.rejectedCount || 0;
+    if (document.getElementById("stat-today")) document.getElementById("stat-today").textContent = data.todayCount || 0;
 
     // Reset hall counts to 0
     Object.keys(HALLS).forEach(id => {
@@ -228,14 +233,21 @@ async function loadStats() {
       if (hallEl) hallEl.textContent = 0;
     });
 
-    data.byHall.forEach(h => {
-      const statEl = document.getElementById(`stat-h${h._id}`);
-      const hallEl = document.getElementById(`hall-${h._id}-count`);
-      if (statEl) statEl.textContent = h.count;
-      if (hallEl) hallEl.textContent = h.count;
-    });
+    if (Array.isArray(data.byHall)) {
+      data.byHall.forEach(h => {
+        const statEl = document.getElementById(`stat-h${h._id}`);
+        const hallEl = document.getElementById(`hall-${h._id}-count`);
+        if (statEl) statEl.textContent = h.count;
+        if (hallEl) hallEl.textContent = h.count;
+      });
+    }
 
-    document.getElementById("sidebar-count").textContent = data.total;
+    if (document.getElementById("sidebar-count")) {
+      document.getElementById("sidebar-count").textContent = data.total || 0;
+    }
+    if (document.getElementById("sidebar-pending-count")) {
+      document.getElementById("sidebar-pending-count").textContent = data.pendingCount || 0;
+    }
 
   } catch (err) {
     console.error("Stats error:", err);
@@ -257,6 +269,7 @@ async function loadBookings() {
 
     allBookings = data;
     applyFilters();
+    applyRequestFilters();
     renderRecent(data);
   } catch (err) {
     console.error("Load bookings error:", err);
@@ -264,28 +277,44 @@ async function loadBookings() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  FILTERS
+//  ALL BOOKINGS FILTERS & TABLE/MOBILE RENDERING
 // ═══════════════════════════════════════════════════════════════
-document.getElementById("search-input").addEventListener("input", applyFilters);
-document.getElementById("filter-hall").addEventListener("change", applyFilters);
-document.getElementById("filter-date").addEventListener("change", applyFilters);
+const searchInput = document.getElementById("search-input");
+const filterHall = document.getElementById("filter-hall");
+const filterDate = document.getElementById("filter-date");
+const filterStatus = document.getElementById("filter-status");
+
+if (searchInput) searchInput.addEventListener("input", applyFilters);
+if (filterHall) filterHall.addEventListener("change", applyFilters);
+if (filterDate) filterDate.addEventListener("change", applyFilters);
+if (filterStatus) filterStatus.addEventListener("change", applyFilters);
 
 function applyFilters() {
-  const query = document.getElementById("search-input").value.toLowerCase().trim();
-  const hallFilt = document.getElementById("filter-hall").value;
-  const dateFilt = document.getElementById("filter-date").value;
+  const query = (searchInput ? searchInput.value : "").toLowerCase().trim();
+  const hallFilt = filterHall ? filterHall.value : "";
+  const dateFilt = filterDate ? filterDate.value : "";
+  const statusFilt = filterStatus ? filterStatus.value : "";
   const todayStr = new Date().toISOString().split("T")[0];
 
   let filtered = allBookings.filter(b => {
-    const name = (HALLS[String(b.hallId)]?.name || "").toLowerCase();
+    const hallName = (HALLS[String(b.hallId)]?.name || "").toLowerCase();
     const userName = (b.userName || "").toLowerCase();
     const userEmail = (b.userEmail || "").toLowerCase();
+    const dept = (b.dept || "").toLowerCase();
+    const phone = (b.phone || "").toLowerCase();
+    const eventName = (b.eventName || "").toLowerCase();
+    const bookingStatus = b.status || "Pending";
+
     const matchQ = !query ||
-      name.includes(query) ||
+      hallName.includes(query) ||
       b.date.includes(query) ||
       b.time.toLowerCase().includes(query) ||
       userName.includes(query) ||
-      userEmail.includes(query);
+      userEmail.includes(query) ||
+      dept.includes(query) ||
+      phone.includes(query) ||
+      eventName.includes(query);
+
     const matchH = !hallFilt || String(b.hallId) === hallFilt;
 
     let matchD = true;
@@ -293,47 +322,50 @@ function applyFilters() {
     if (dateFilt === "upcoming") matchD = b.date >= todayStr;
     if (dateFilt === "past") matchD = b.date < todayStr;
 
-    return matchQ && matchH && matchD;
+    const matchS = !statusFilt || bookingStatus === statusFilt;
+
+    return matchQ && matchH && matchD && matchS;
   });
 
   filtered.sort((a, b) => b.date.localeCompare(a.date) || a.time.localeCompare(b.time));
   renderTable(filtered);
+  renderMobileCards(filtered);
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  RENDER TABLE (All Bookings section)
-// ═══════════════════════════════════════════════════════════════
 function renderTable(bookings) {
   const tbody = document.getElementById("bookings-tbody");
   const empty = document.getElementById("table-empty");
   const footer = document.getElementById("results-count");
 
+  if (!tbody) return;
+
   if (bookings.length === 0) {
     tbody.innerHTML = "";
-    empty.classList.remove("hidden");
-    footer.textContent = "No bookings match your filters";
+    if (empty) empty.classList.remove("hidden");
+    if (footer) footer.textContent = "No bookings match your filters";
     return;
   }
 
-  empty.classList.add("hidden");
-  footer.textContent = `Showing ${bookings.length} booking${bookings.length !== 1 ? "s" : ""}`;
+  if (empty) empty.classList.add("hidden");
+  if (footer) footer.textContent = `Showing ${bookings.length} booking${bookings.length !== 1 ? "s" : ""}`;
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const colors = ["auditorium", "seminar", "conference", "auditorium", "seminar", "conference"];
 
   tbody.innerHTML = bookings.map((b, i) => {
-    const isPast = b.date < todayStr;
     const hallName = HALLS[String(b.hallId)]?.name || `Hall ${b.hallId}`;
-    const colors = ["auditorium", "seminar", "conference", "auditorium", "seminar", "conference"];
     const cls = colors[b.hallId % 6] || "auditorium";
     const userHtml = userCell(b);
+    const status = b.status || "Pending";
+    const eventName = b.eventName || "—";
     return `
       <tr id="row-${b._id}">
         <td class="row-index">${i + 1}</td>
         <td><span class="hall-chip ${cls}">${hallName}</span></td>
+        <td><span style="font-weight:600;color:#fff;">${escapeHtml(eventName)}</span></td>
         <td>${formatDate(b.date)}</td>
         <td>${b.time}</td>
         <td>${userHtml}</td>
-        <td><span class="status-badge ${isPast ? "past" : ""}">${isPast ? "Completed" : "Booked"}</span></td>
+        <td><span class="bci-status-badge ${status}" style="font-size:0.7rem;padding:0.2rem 0.6rem;">${status}</span></td>
         <td>
           <button class="del-btn" id="adel-${b._id}" onclick="confirmDelete('${b._id}')">
             <i data-lucide="trash-2"></i> Delete
@@ -347,10 +379,309 @@ function renderTable(bookings) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  ACCEPT / REJECT REQUESTS FILTERS & QUICK TABS
+// ═══════════════════════════════════════════════════════════════
+const reqSearchInput = document.getElementById("req-search-input");
+const reqFilterHall = document.getElementById("req-filter-hall");
+const reqFilterDate = document.getElementById("req-filter-date");
+
+if (reqSearchInput) reqSearchInput.addEventListener("input", applyRequestFilters);
+if (reqFilterHall) reqFilterHall.addEventListener("change", applyRequestFilters);
+if (reqFilterDate) reqFilterDate.addEventListener("change", applyRequestFilters);
+
+// Bind Status Tab Buttons
+document.querySelectorAll(".status-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    currentStatusFilter = tab.dataset.status || "";
+    updateTabButtons();
+    applyRequestFilters();
+  });
+});
+
+function updateTabButtons() {
+  document.querySelectorAll(".status-tab").forEach(tab => {
+    const s = tab.dataset.status || "";
+    tab.classList.toggle("active", s === currentStatusFilter);
+  });
+}
+
+function updateTabBadges() {
+  const allCount = allBookings.length;
+  const pendingCount = allBookings.filter(b => (b.status || "Pending") === "Pending").length;
+  const approvedCount = allBookings.filter(b => b.status === "Approved").length;
+  const rejectedCount = allBookings.filter(b => b.status === "Rejected").length;
+
+  const bAll = document.getElementById("tab-badge-all");
+  const bPen = document.getElementById("tab-badge-pending");
+  const bApp = document.getElementById("tab-badge-approved");
+  const bRej = document.getElementById("tab-badge-rejected");
+  const sidePen = document.getElementById("sidebar-pending-count");
+
+  if (bAll) bAll.textContent = allCount;
+  if (bPen) bPen.textContent = pendingCount;
+  if (bApp) bApp.textContent = approvedCount;
+  if (bRej) bRej.textContent = rejectedCount;
+  if (sidePen) sidePen.textContent = pendingCount;
+}
+
+function applyRequestFilters() {
+  updateTabBadges();
+
+  const query = (reqSearchInput ? reqSearchInput.value : "").toLowerCase().trim();
+  const hallFilt = reqFilterHall ? reqFilterHall.value : "";
+  const dateFilt = reqFilterDate ? reqFilterDate.value : "";
+  const statusFilt = currentStatusFilter;
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  let filtered = allBookings.filter(b => {
+    const hallName = (HALLS[String(b.hallId)]?.name || "").toLowerCase();
+    const userName = (b.userName || "").toLowerCase();
+    const userEmail = (b.userEmail || "").toLowerCase();
+    const dept = (b.dept || "").toLowerCase();
+    const phone = (b.phone || "").toLowerCase();
+    const eventName = (b.eventName || "").toLowerCase();
+    const bookingStatus = b.status || "Pending";
+
+    const matchQ = !query ||
+      hallName.includes(query) ||
+      b.date.includes(query) ||
+      b.time.toLowerCase().includes(query) ||
+      userName.includes(query) ||
+      userEmail.includes(query) ||
+      dept.includes(query) ||
+      phone.includes(query) ||
+      eventName.includes(query);
+
+    const matchH = !hallFilt || String(b.hallId) === hallFilt;
+
+    let matchD = true;
+    if (dateFilt === "today") matchD = b.date === todayStr;
+    if (dateFilt === "upcoming") matchD = b.date >= todayStr;
+    if (dateFilt === "past") matchD = b.date < todayStr;
+
+    const matchS = !statusFilt || bookingStatus === statusFilt;
+
+    return matchQ && matchH && matchD && matchS;
+  });
+
+  filtered.sort((a, b) => b.date.localeCompare(a.date) || a.time.localeCompare(b.time));
+  renderBookingCards(filtered);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDER INDIVIDUAL BOOKING CARDS (Accept / Reject Space)
+// ═══════════════════════════════════════════════════════════════
+function renderBookingCards(bookings) {
+  const container = document.getElementById("booking-cards-grid");
+  const empty = document.getElementById("req-empty");
+  const footer = document.getElementById("req-results-count");
+
+  if (!container) return;
+
+  if (bookings.length === 0) {
+    container.innerHTML = "";
+    if (empty) empty.classList.remove("hidden");
+    if (footer) footer.textContent = "No booking requests match your filters";
+    return;
+  }
+
+  if (empty) empty.classList.add("hidden");
+  if (footer) footer.textContent = `Showing ${bookings.length} request${bookings.length !== 1 ? "s" : ""}`;
+
+  container.innerHTML = bookings.map(b => {
+    const hallName = HALLS[String(b.hallId)]?.name || `Hall ${b.hallId}`;
+    const status = b.status || "Pending";
+    const statusIcon = status === "Approved" ? "check-circle" : (status === "Rejected" ? "x-circle" : "clock-3");
+
+    // Details from booking object
+    const lecturerName = b.userName || "Not specified";
+    const department   = b.dept || "Not specified";
+    const email        = b.userEmail || "Not specified";
+    const contact      = b.phone || "Not specified";
+
+    const eventName    = b.eventName || "Campus Event / Lecture";
+    const bookingDate  = formatDate(b.date);
+    const timeSlot     = b.time;
+    const participants = b.participants ? `${b.participants} Attendees` : "Open / Not specified";
+
+    const isApproved   = status === "Approved";
+    const isRejected   = status === "Rejected";
+
+    return `
+      <div class="booking-card-item status-${status}" id="bcard-${b._id}">
+        <!-- Top Card Header -->
+        <div class="bci-header">
+          <div class="bci-header-left">
+            <div class="bci-hall-chip">
+              <i data-lucide="building"></i>
+              <span>${hallName}</span>
+            </div>
+            <div class="bci-event-title">${escapeHtml(eventName)}</div>
+          </div>
+          <div class="bci-status-badge ${status}">
+            <i data-lucide="${statusIcon}"></i>
+            <span>${status}</span>
+          </div>
+        </div>
+
+        <!-- Middle Sections: User & Event Details -->
+        <div class="bci-sections">
+          <!-- 1. USER DETAILS -->
+          <div class="bci-block">
+            <div class="bci-block-title">
+              <i data-lucide="user-check"></i> USER DETAILS
+            </div>
+            <div class="bci-grid">
+              <div class="bci-field">
+                <span class="bci-field-label">Lecturer Name</span>
+                <span class="bci-field-val" title="${escapeHtml(lecturerName)}">
+                  <i data-lucide="user"></i> ${escapeHtml(lecturerName)}
+                </span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">Department</span>
+                <span class="bci-field-val" title="${escapeHtml(department)}">
+                  <i data-lucide="graduation-cap"></i> ${escapeHtml(department)}
+                </span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">Email</span>
+                <span class="bci-field-val" title="${escapeHtml(email)}">
+                  <i data-lucide="mail"></i> <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>
+                </span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">Contact Number</span>
+                <span class="bci-field-val" title="${escapeHtml(contact)}">
+                  <i data-lucide="phone"></i> ${escapeHtml(contact)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. EVENT DETAILS -->
+          <div class="bci-block">
+            <div class="bci-block-title">
+              <i data-lucide="calendar"></i> EVENT DETAILS
+            </div>
+            <div class="bci-grid">
+              <div class="bci-field full-width">
+                <span class="bci-field-label">Event Name</span>
+                <span class="bci-field-val" title="${escapeHtml(eventName)}">
+                  <i data-lucide="bookmark"></i> ${escapeHtml(eventName)}
+                </span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">Venue</span>
+                <span class="bci-field-val" title="${escapeHtml(hallName)}">
+                  <i data-lucide="map-pin"></i> ${escapeHtml(hallName)}
+                </span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">Booking Date</span>
+                <span class="bci-field-val">
+                  <i data-lucide="calendar-days"></i> ${bookingDate}
+                </span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">Time Slot</span>
+                <span class="bci-field-val">
+                  <i data-lucide="clock"></i> ${escapeHtml(timeSlot)}
+                </span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">Participants</span>
+                <span class="bci-field-val">
+                  <i data-lucide="users"></i> ${escapeHtml(participants)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Action Buttons: Approve (Green) & Reject (Red) -->
+        <div class="bci-actions">
+          <button class="btn-approve" id="app-btn-${b._id}" onclick="updateBookingStatus('${b._id}', 'Approved')" ${isApproved ? 'disabled' : ''}>
+            <i data-lucide="check"></i>
+            <span>${isApproved ? 'Approved ✓' : 'APPROVE'}</span>
+          </button>
+          <button class="btn-reject" id="rej-btn-${b._id}" onclick="updateBookingStatus('${b._id}', 'Rejected')" ${isRejected ? 'disabled' : ''}>
+            <i data-lucide="x"></i>
+            <span>${isRejected ? 'Rejected ✕' : 'REJECT'}</span>
+          </button>
+          <button class="btn-delete-card" onclick="confirmDelete('${b._id}')" title="Delete Booking">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  lucide.createIcons();
+}
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  APPROVE & REJECT ACTIONS
+// ═══════════════════════════════════════════════════════════════
+window.updateBookingStatus = async function(id, newStatus) {
+  const appBtn = document.getElementById(`app-btn-${id}`);
+  const rejBtn = document.getElementById(`rej-btn-${id}`);
+
+  if (appBtn) appBtn.disabled = true;
+  if (rejBtn) rejBtn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/bookings/${id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      showToast(
+        newStatus === "Approved" ? "Booking Approved 🎉" : "Booking Rejected ❌",
+        data.message || `Booking status updated to ${newStatus}.`,
+        newStatus === "Approved" ? "success" : "error"
+      );
+
+      // Update local state and re-render smoothly
+      const idx = allBookings.findIndex(b => b._id === id);
+      if (idx !== -1) {
+        allBookings[idx].status = newStatus;
+      }
+      applyRequestFilters();
+      applyFilters();
+      renderRecent(allBookings);
+      loadStats();
+    } else {
+      showToast("Cannot Update Status", data.message || "Failed to update booking status.", "error");
+      if (appBtn) appBtn.disabled = false;
+      if (rejBtn) rejBtn.disabled = false;
+    }
+  } catch (err) {
+    showToast("Network Error", "Could not connect to server.", "error");
+    if (appBtn) appBtn.disabled = false;
+    if (rejBtn) rejBtn.disabled = false;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
 //  RENDER RECENT (Dashboard)
 // ═══════════════════════════════════════════════════════════════
 function renderRecent(bookings) {
   const container = document.getElementById("recent-bookings-table");
+  if (!container) return;
   const recent = [...bookings]
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 5);
@@ -360,32 +691,34 @@ function renderRecent(bookings) {
     return;
   }
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const colors = ["auditorium", "seminar", "conference", "auditorium", "seminar", "conference"];
 
   container.innerHTML = `
     <table class="bookings-table">
       <thead>
-        <tr><th>#</th><th>Hall</th><th>Date</th><th>Time</th><th>Status</th><th>Action</th></tr>
+        <tr><th>#</th><th>Hall</th><th>Date</th><th>Time</th><th>User / Event</th><th>Status</th><th>Action</th></tr>
       </thead>
       <tbody>
         ${recent.map((b, i) => {
-    const isPast = b.date < todayStr;
-    const hallName = HALLS[String(b.hallId)] || `Hall ${b.hallId}`;
-    const cls = HALL_CLASS[String(b.hallId)] || "h1";
-    return `
+          const hallName = HALLS[String(b.hallId)]?.name || `Hall ${b.hallId}`;
+          const cls = colors[b.hallId % 6] || "auditorium";
+          const status = b.status || "Pending";
+          const eventOrUser = b.eventName ? b.eventName : (b.userName || "Booking");
+          return `
             <tr id="drow-${b._id}">
               <td class="row-index">${i + 1}</td>
               <td><span class="hall-chip ${cls}">${hallName}</span></td>
               <td>${formatDate(b.date)}</td>
               <td>${b.time}</td>
-              <td><span class="status-badge ${isPast ? "past" : ""}">${isPast ? "Completed" : "Booked"}</span></td>
+              <td><span style="font-weight:600;font-size:0.85rem;color:#fff;">${escapeHtml(eventOrUser)}</span></td>
+              <td><span class="bci-status-badge ${status}" style="font-size:0.7rem;padding:0.2rem 0.6rem;">${status}</span></td>
               <td>
                 <button class="del-btn" id="ddel-${b._id}" onclick="confirmDelete('${b._id}')">
                   <i data-lucide="trash-2"></i> Delete
                 </button>
               </td>
             </tr>`;
-  }).join("")}
+        }).join("")}
       </tbody>
     </table>
   `;

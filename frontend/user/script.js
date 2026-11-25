@@ -443,6 +443,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const date   = dateInput.value;
     const start  = timeHiddenStart.value;
     const end    = timeHiddenEnd.value;
+    const eventName = (document.getElementById('event-name')?.value || '').trim();
+    const participants = document.getElementById('event-participants')?.value || '';
 
     if (!start || !end) {
       timeError.classList.remove('hidden');
@@ -460,6 +462,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentUser = getCurrentUser();
     const userEmail   = currentUser ? (currentUser.email || '').trim().toLowerCase() : '';
     const userName    = currentUser ? currentUser.name  : '';
+    const dept        = currentUser ? currentUser.dept  : '';
+    const phone       = currentUser ? currentUser.phone : '';
 
     setLoading(true);
 
@@ -467,12 +471,22 @@ document.addEventListener('DOMContentLoaded', () => {
       const res  = await fetch('/book', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ hallId: Number(hallId), date, time, userEmail, userName })
+        body:    JSON.stringify({
+          hallId: Number(hallId),
+          date,
+          time,
+          userEmail,
+          userName,
+          dept,
+          phone,
+          eventName,
+          participants
+        })
       });
       const data = await res.json();
 
       if (data.success) {
-        showToast('Booking Confirmed 🎉', data.message, 'success');
+        showToast('Booking Submitted 🎉', data.message, 'success');
         bookingForm.reset();
         timeHiddenStart.value = '';
         timeHiddenEnd.value = '';
@@ -529,14 +543,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     bookingsContainer.innerHTML = bookings.map(b => {
       const hall = HALLS[String(b.hallId)] || { name: 'Hall ' + b.hallId, capacity: '' };
+      const status = b.status || 'Pending';
+      const statusClass = status === 'Approved' ? 'approved' : (status === 'Rejected' ? 'rejected' : 'pending');
+      const eventName = b.eventName ? `<div style="font-size:0.85rem;color:#FF7034;font-weight:600;margin-top:2px;">${b.eventName}</div>` : '';
       return `
         <div class="booking-item" id="booking-${b._id}">
           <div class="booking-item-header">
-            <div class="booking-item-title">${hall.name}</div>
-            <div class="booking-status">Booked</div>
+            <div>
+              <div class="booking-item-title">${hall.name}</div>
+              ${eventName}
+            </div>
+            <div class="booking-status ${statusClass}">${status}</div>
           </div>
           <div class="booking-item-details">
-            <div class="detail-row"><i data-lucide="users"></i><span>${hall.capacity}</span></div>
+            <div class="detail-row"><i data-lucide="users"></i><span>${b.participants ? b.participants + ' pax' : hall.capacity}</span></div>
             <div class="detail-row"><i data-lucide="calendar"></i><span>${formatDate(b.date)}</span></div>
             <div class="detail-row"><i data-lucide="clock"></i><span>${b.time}</span></div>
           </div>
