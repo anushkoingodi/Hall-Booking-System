@@ -334,8 +334,22 @@
             <div id="bookings-container" class="bookings-grid"></div>
             <div id="empty-state" class="empty-state visible">
                 <div class="empty-icon-wrap"><i data-lucide="calendar-x"></i></div>
-                <h3>No bookings yet</h3>
-                <p>When you book a hall, it will appear here.</p>
+                <h3>No upcoming bookings</h3>
+                <p>When you book a hall, active and upcoming bookings will appear here.</p>
+            </div>
+        </section>
+
+        <!-- ═══════════ BOOKING HISTORY ═══════════ -->
+        <section id="booking-history" class="my-bookings-section booking-history-section">
+            <div class="section-header">
+                <h2>Booking History</h2>
+                <div class="badge-count history-badge" id="history-count">0</div>
+            </div>
+            <div id="history-container" class="bookings-grid"></div>
+            <div id="history-empty-state" class="empty-state visible">
+                <div class="empty-icon-wrap"><i data-lucide="history"></i></div>
+                <h3>No booking history yet</h3>
+                <p>Completed sessions will automatically move here once their scheduled end time passes.</p>
             </div>
         </section>
     </main>

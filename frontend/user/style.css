@@ -453,6 +453,11 @@ main {
   transition: transform 0.25s, box-shadow 0.25s;
   animation: card-in 0.35s ease;
 }
+.booking-item.status-pending  { border-top-color: #F59E0B; }
+.booking-item.status-approved { border-top-color: var(--success); }
+.booking-item.status-rejected { border-top-color: var(--error); }
+.booking-item.history-item    { opacity: 0.94; }
+
 @keyframes card-in {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -470,6 +475,21 @@ main {
   font-size: 0.7rem; padding: 0.2rem 0.6rem;
   border-radius: 6px; font-weight: 700; text-transform: uppercase;
   white-space: nowrap; flex-shrink: 0;
+}
+.booking-status.pending {
+  background: #FEF3C7; color: #D97706;
+}
+.booking-status.approved {
+  background: var(--success-light); color: var(--success);
+}
+.booking-status.rejected {
+  background: #FEE2E2; color: var(--error);
+}
+.booking-history-section {
+  padding-top: 0;
+}
+.badge-count.history-badge {
+  background: #F1F5F9; color: var(--secondary);
 }
 
 .detail-row {

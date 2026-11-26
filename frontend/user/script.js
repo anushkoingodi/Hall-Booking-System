@@ -32,6 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const bookingsContainer = document.getElementById('bookings-container');
   const emptyState        = document.getElementById('empty-state');
   const bookingCountBadge = document.getElementById('booking-count');
+  const historyContainer  = document.getElementById('history-container');
+  const historyEmptyState = document.getElementById('history-empty-state');
+  const historyCountBadge = document.getElementById('history-count');
   const submitBtn         = document.getElementById('submit-btn');
   const tpTriggerStart    = document.getElementById('tp-trigger-start');
   const tpTriggerTextStart= document.getElementById('tp-trigger-text-start');
@@ -529,42 +532,189 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch {}
   }
 
-  function renderBookings(bookings) {
-    bookingCountBadge.textContent = bookings.length;
+  // ══════════════════════════════════════════════════════════════
+  //  TIME PARSING & AUTOMATIC LIFECYCLE CATEGORISATION
+  // ══════════════════════════════════════════════════════════════
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 
-    if (bookings.length === 0) {
-      bookingsContainer.innerHTML = '';
-      emptyState.classList.add('visible');
-      return;
+  function parseTimeToMinutes(str) {
+    if (!str || typeof str !== 'string') return null;
+    const clean = str.trim();
+    const match = clean.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
+    if (!match) return null;
+
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const period = match[3] ? match[3].toUpperCase() : null;
+
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes) || minutes < 0 || minutes > 59) {
+      return null;
     }
 
-    emptyState.classList.remove('visible');
-    bookings.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+    if (period) {
+      if (hours < 1 || hours > 12) return null;
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+    } else if (hours < 0 || hours > 23) {
+      return null;
+    }
 
-    bookingsContainer.innerHTML = bookings.map(b => {
-      const hall = HALLS[String(b.hallId)] || { name: 'Hall ' + b.hallId, capacity: '' };
-      const status = b.status || 'Pending';
-      const statusClass = status === 'Approved' ? 'approved' : (status === 'Rejected' ? 'rejected' : 'pending');
-      const eventName = b.eventName ? `<div style="font-size:0.85rem;color:#FF7034;font-weight:600;margin-top:2px;">${b.eventName}</div>` : '';
+    return hours * 60 + minutes;
+  }
+
+  function getBookingSchedule(booking, now = new Date()) {
+    const rawTime = typeof booking.time === 'string' ? booking.time : '';
+    const parts = rawTime.split(/\s*[-–]\s*/);
+    const startTimeText = parts[0] ? parts[0].trim() : '';
+    const endTimeText = parts[1] ? parts[1].trim() : '';
+
+    const dateMatch = typeof booking.date === 'string'
+      ? booking.date.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
+      : null;
+
+    if (!dateMatch) {
+      return { startTimeText, endTimeText, startMin: 0, endMin: 0, endDateTime: null, isPast: false };
+    }
+
+    const year = Number(dateMatch[1]);
+    const month = Number(dateMatch[2]);
+    const day = Number(dateMatch[3]);
+
+    const parsedStart = parseTimeToMinutes(startTimeText);
+    const startMin = parsedStart !== null
+      ? parsedStart
+      : (typeof booking.startMin === 'number' && Number.isFinite(booking.startMin) ? booking.startMin : 0);
+
+    const parsedEnd = parseTimeToMinutes(endTimeText);
+    const endMin = parsedEnd !== null
+      ? parsedEnd
+      : (typeof booking.endMin === 'number' && Number.isFinite(booking.endMin) ? booking.endMin : null);
+
+    if (endMin === null || endMin < 0 || endMin > 1440) {
+      return { startTimeText, endTimeText, startMin, endMin: 0, endDateTime: null, isPast: false };
+    }
+
+    const endDateTime = new Date(year, month - 1, day, Math.floor(endMin / 60), endMin % 60, 0, 0);
+    if (Number.isNaN(endDateTime.getTime())) {
+      return { startTimeText, endTimeText, startMin, endMin: 0, endDateTime: null, isPast: false };
+    }
+
+    return {
+      startTimeText,
+      endTimeText,
+      startMin,
+      endMin,
+      endDateTime,
+      isPast: now.getTime() >= endDateTime.getTime()
+    };
+  }
+
+  function renderBookingCard(b, schedule, isHistory) {
+    const hall = HALLS[String(b.hallId)] || { name: 'Hall ' + b.hallId, capacity: '' };
+    const status = b.status || 'Pending';
+    const statusClass = status === 'Approved' ? 'approved' : (status === 'Rejected' ? 'rejected' : 'pending');
+    const eventNameHtml = b.eventName
+      ? `<div style="font-size:0.85rem;color:#FF7034;font-weight:600;margin-top:2px;">${escapeHtml(b.eventName)}</div>`
+      : '';
+    const capacityText = b.participants ? `${b.participants} pax` : (hall.capacity || 'N/A');
+
+    if (isHistory) {
+      const startLabel = schedule.startTimeText || '—';
+      const endLabel = schedule.endTimeText || '—';
       return `
-        <div class="booking-item" id="booking-${b._id}">
+        <div class="booking-item history-item status-${statusClass}" id="history-${b._id}">
           <div class="booking-item-header">
             <div>
-              <div class="booking-item-title">${hall.name}</div>
-              ${eventName}
+              <div class="booking-item-title">${escapeHtml(hall.name)}</div>
+              ${eventNameHtml}
             </div>
-            <div class="booking-status ${statusClass}">${status}</div>
+            <div class="booking-status ${statusClass}">${escapeHtml(status)}</div>
           </div>
           <div class="booking-item-details">
-            <div class="detail-row"><i data-lucide="users"></i><span>${b.participants ? b.participants + ' pax' : hall.capacity}</span></div>
             <div class="detail-row"><i data-lucide="calendar"></i><span>${formatDate(b.date)}</span></div>
-            <div class="detail-row"><i data-lucide="clock"></i><span>${b.time}</span></div>
+            <div class="detail-row"><i data-lucide="clock-3"></i><span>Start: ${escapeHtml(startLabel)}</span></div>
+            <div class="detail-row"><i data-lucide="clock"></i><span>End: ${escapeHtml(endLabel)}</span></div>
+            <div class="detail-row"><i data-lucide="users"></i><span>${escapeHtml(capacityText)}</span></div>
+            ${b.eventName ? `<div class="detail-row"><i data-lucide="bookmark"></i><span>Purpose: ${escapeHtml(b.eventName)}</span></div>` : ''}
           </div>
-          <button class="cancel-btn" onclick="deleteBooking('${b._id}')" id="del-${b._id}">
-            🗑️ Cancel Booking
-          </button>
         </div>`;
-    }).join('');
+    }
+
+    return `
+      <div class="booking-item status-${statusClass}" id="booking-${b._id}">
+        <div class="booking-item-header">
+          <div>
+            <div class="booking-item-title">${escapeHtml(hall.name)}</div>
+            ${eventNameHtml}
+          </div>
+          <div class="booking-status ${statusClass}">${escapeHtml(status)}</div>
+        </div>
+        <div class="booking-item-details">
+          <div class="detail-row"><i data-lucide="users"></i><span>${escapeHtml(capacityText)}</span></div>
+          <div class="detail-row"><i data-lucide="calendar"></i><span>${formatDate(b.date)}</span></div>
+          <div class="detail-row"><i data-lucide="clock"></i><span>${escapeHtml(b.time || '')}</span></div>
+        </div>
+        <button class="cancel-btn" onclick="deleteBooking('${b._id}')" id="del-${b._id}">
+          🗑️ Cancel Booking
+        </button>
+      </div>`;
+  }
+
+  function renderBookings(bookings) {
+    const now = new Date();
+    const upcoming = [];
+    const history = [];
+
+    bookings.forEach(b => {
+      const schedule = getBookingSchedule(b, now);
+      if (schedule.isPast) {
+        history.push({ booking: b, schedule });
+      } else {
+        upcoming.push({ booking: b, schedule });
+      }
+    });
+
+    upcoming.sort((a, b) =>
+      String(a.booking.date || '').localeCompare(String(b.booking.date || '')) ||
+      a.schedule.startMin - b.schedule.startMin
+    );
+
+    history.sort((a, b) =>
+      String(b.booking.date || '').localeCompare(String(a.booking.date || '')) ||
+      b.schedule.endMin - a.schedule.endMin
+    );
+
+    bookingCountBadge.textContent = upcoming.length;
+    if (upcoming.length === 0) {
+      bookingsContainer.innerHTML = '';
+      emptyState.classList.add('visible');
+    } else {
+      emptyState.classList.remove('visible');
+      bookingsContainer.innerHTML = upcoming
+        .map(({ booking, schedule }) => renderBookingCard(booking, schedule, false))
+        .join('');
+    }
+
+    if (historyCountBadge && historyContainer && historyEmptyState) {
+      historyCountBadge.textContent = history.length;
+      if (history.length === 0) {
+        historyContainer.innerHTML = '';
+        historyEmptyState.classList.add('visible');
+      } else {
+        historyEmptyState.classList.remove('visible');
+        historyContainer.innerHTML = history
+          .map(({ booking, schedule }) => renderBookingCard(booking, schedule, true))
+          .join('');
+      }
+    }
 
     lucide.createIcons();
   }
