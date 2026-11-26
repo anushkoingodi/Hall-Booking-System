@@ -118,6 +118,9 @@
       <a href="#bookings" id="drawer-bookings">
         <i data-lucide="calendar-check"></i> My Bookings
       </a>
+      <a href="#history" id="drawer-history">
+        <i data-lucide="history"></i> History
+      </a>
     </nav>
 
     <!-- NAVBAR -->
@@ -135,6 +138,7 @@
                 <a href="#" class="active">Home</a>
                 <a href="#book">Book Hall</a>
                 <a href="#bookings">My Bookings</a>
+                <a href="#history" id="nav-history-link">History</a>
             </div>
 
             <div class="nav-right">
@@ -169,7 +173,12 @@
                         <div><span class="pd-label">Phone</span><span class="pd-value" id="pd-phone">—</span></div>
                       </div>
                     </div>
-                    <div class="pd-footer">
+                    <div class="pd-footer" style="display:flex;flex-direction:column;gap:0.5rem;">
+                      <button class="pd-history-btn" id="pd-history-btn" type="button">
+                        <i data-lucide="history" style="width:14px;height:14px;"></i>
+                        <span>Booking History</span>
+                        <span class="pd-history-badge" id="pd-history-count">0</span>
+                      </button>
                       <button class="pd-change-btn" id="pd-change-btn">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         Change Details
@@ -194,6 +203,10 @@
       <a href="#bookings" class="bottom-nav-item" id="bnav-bookings">
         <i data-lucide="calendar-check"></i>
         <span>My Bookings</span>
+      </a>
+      <a href="#history" class="bottom-nav-item" id="bnav-history">
+        <i data-lucide="history"></i>
+        <span>History</span>
       </a>
     </nav>
 
@@ -338,21 +351,47 @@
                 <p>When you book a hall, active and upcoming bookings will appear here.</p>
             </div>
         </section>
-
-        <!-- ═══════════ BOOKING HISTORY ═══════════ -->
-        <section id="booking-history" class="my-bookings-section booking-history-section">
-            <div class="section-header">
-                <h2>Booking History</h2>
-                <div class="badge-count history-badge" id="history-count">0</div>
-            </div>
-            <div id="history-container" class="bookings-grid"></div>
-            <div id="history-empty-state" class="empty-state visible">
-                <div class="empty-icon-wrap"><i data-lucide="history"></i></div>
-                <h3>No booking history yet</h3>
-                <p>Completed sessions will automatically move here once their scheduled end time passes.</p>
-            </div>
-        </section>
     </main>
+
+    <!-- ═══════ BOOKING HISTORY MODAL ═══════ -->
+    <div id="history-modal-overlay" class="history-modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Booking History">
+        <div class="history-modal-card">
+            <div class="history-modal-header">
+                <div style="display:flex;align-items:center;gap:0.65rem;">
+                    <div class="history-modal-icon"><i data-lucide="history"></i></div>
+                    <div>
+                        <h2 style="font-size:1.15rem;margin:0;color:var(--secondary);">Booking History</h2>
+                        <p style="font-size:0.8rem;margin:0;color:var(--muted);">Past and completed hall bookings</p>
+                    </div>
+                </div>
+                <button type="button" class="history-modal-close" id="close-history-btn" aria-label="Close history">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="history-modal-body">
+                <div id="history-table-wrap" class="user-history-table-wrap">
+                    <table class="user-history-table">
+                        <thead>
+                            <tr>
+                                <th>Hall</th>
+                                <th>Purpose</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Pax</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody"></tbody>
+                    </table>
+                </div>
+                <div id="history-empty-state" class="empty-state visible">
+                    <div class="empty-icon-wrap"><i data-lucide="history"></i></div>
+                    <h3>No booking history yet</h3>
+                    <p>Completed sessions will automatically move here once their scheduled end time passes.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
     <script>

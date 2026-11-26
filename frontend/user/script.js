@@ -32,9 +32,45 @@ document.addEventListener('DOMContentLoaded', () => {
   const bookingsContainer = document.getElementById('bookings-container');
   const emptyState        = document.getElementById('empty-state');
   const bookingCountBadge = document.getElementById('booking-count');
-  const historyContainer  = document.getElementById('history-container');
+  const historyTbody      = document.getElementById('history-tbody');
+  const historyTableWrap  = document.getElementById('history-table-wrap');
   const historyEmptyState = document.getElementById('history-empty-state');
-  const historyCountBadge = document.getElementById('history-count');
+  const pdHistoryCount    = document.getElementById('pd-history-count');
+  const historyModal      = document.getElementById('history-modal-overlay');
+  const pdHistoryBtn      = document.getElementById('pd-history-btn');
+  const navHistoryLink    = document.getElementById('nav-history-link');
+  const drawerHistoryLink = document.getElementById('drawer-history');
+  const bnavHistoryLink   = document.getElementById('bnav-history');
+  const closeHistoryBtn   = document.getElementById('close-history-btn');
+
+  function openHistoryModal(e) {
+    if (e) e.preventDefault();
+    if (!historyModal) return;
+    historyModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    const dropdown = document.getElementById('profile-dropdown');
+    if (dropdown) dropdown.classList.remove('open');
+  }
+  function closeHistoryModal() {
+    if (!historyModal) return;
+    historyModal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+  if (pdHistoryBtn) pdHistoryBtn.addEventListener('click', openHistoryModal);
+  if (navHistoryLink) navHistoryLink.addEventListener('click', openHistoryModal);
+  if (drawerHistoryLink) drawerHistoryLink.addEventListener('click', openHistoryModal);
+  if (bnavHistoryLink) bnavHistoryLink.addEventListener('click', openHistoryModal);
+  if (closeHistoryBtn) closeHistoryBtn.addEventListener('click', closeHistoryModal);
+  if (historyModal) {
+    historyModal.addEventListener('click', e => {
+      if (e.target === historyModal) closeHistoryModal();
+    });
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && historyModal && !historyModal.classList.contains('hidden')) {
+      closeHistoryModal();
+    }
+  });
   const submitBtn         = document.getElementById('submit-btn');
   const tpTriggerStart    = document.getElementById('tp-trigger-start');
   const tpTriggerTextStart= document.getElementById('tp-trigger-text-start');
@@ -362,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const today = new Date().toISOString().split('T')[0];
       window.bookedPerHall = {};
-      data.filter(b => b.date === today).forEach(b => {
+      data.filter(b => b.date === today && b.status !== 'Cancelled' && b.status !== 'Rejected').forEach(b => {
         const k = String(b.hallId);
         window.bookedPerHall[k] = (window.bookedPerHall[k] || 0) + 1;
       });
@@ -675,7 +711,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     bookings.forEach(b => {
       const schedule = getBookingSchedule(b, now);
-      if (schedule.isPast) {
+      const status = b.status || 'Pending';
+      const isInactive = status === 'Cancelled' || status === 'Rejected';
+      if (schedule.isPast || isInactive) {
         history.push({ booking: b, schedule });
       } else {
         upcoming.push({ booking: b, schedule });
@@ -703,16 +741,36 @@ document.addEventListener('DOMContentLoaded', () => {
         .join('');
     }
 
-    if (historyCountBadge && historyContainer && historyEmptyState) {
-      historyCountBadge.textContent = history.length;
+    if (historyTbody && historyTableWrap && historyEmptyState) {
+      if (pdHistoryCount) pdHistoryCount.textContent = history.length;
       if (history.length === 0) {
-        historyContainer.innerHTML = '';
+        historyTbody.innerHTML = '';
+        historyTableWrap.style.display = 'none';
         historyEmptyState.classList.add('visible');
       } else {
+        historyTableWrap.style.display = 'block';
         historyEmptyState.classList.remove('visible');
-        historyContainer.innerHTML = history
-          .map(({ booking, schedule }) => renderBookingCard(booking, schedule, true))
-          .join('');
+        historyTbody.innerHTML = history.map(({ booking: b, schedule }) => {
+          const hall = HALLS[String(b.hallId)] || { name: 'Hall ' + b.hallId, capacity: '' };
+          const status = b.status || 'Pending';
+          const statusClass = status === 'Approved' ? 'approved'
+            : (status === 'Rejected' ? 'rejected'
+            : (status === 'Cancelled' ? 'cancelled' : 'pending'));
+          const purpose = b.eventName ? escapeHtml(b.eventName) : '—';
+          const pax = b.participants ? `${b.participants}` : (hall.capacity || '—');
+          const timeRange = (schedule.startTimeText && schedule.endTimeText)
+            ? `${escapeHtml(schedule.startTimeText)} – ${escapeHtml(schedule.endTimeText)}`
+            : escapeHtml(b.time || '—');
+          return `
+            <tr id="history-${b._id}">
+              <td style="font-weight:600;">${escapeHtml(hall.name)}</td>
+              <td>${purpose}</td>
+              <td style="white-space:nowrap;">${formatDate(b.date)}</td>
+              <td style="white-space:nowrap;">${timeRange}</td>
+              <td>${escapeHtml(pax)}</td>
+              <td><span class="booking-status ${statusClass}">${escapeHtml(status)}</span></td>
+            </tr>`;
+        }).join('');
       }
     }
 
@@ -727,11 +785,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btn) { btn.disabled = true; btn.textContent = 'Cancelling...'; }
 
     try {
-      const res  = await fetch(`/bookings/${id}`, { method: 'DELETE' });
+      const res  = await fetch(`/bookings/${id}/cancel`, { method: 'PATCH' });
       const data = await res.json();
 
       if (data.success) {
-        showToast('Cancelled', 'Booking removed.', 'success');
+        showToast('Cancelled', 'Booking cancelled and moved to history.', 'success');
         const card = document.getElementById(`booking-${id}`);
         if (card) {
           card.style.transition = 'opacity 0.3s, transform 0.3s';

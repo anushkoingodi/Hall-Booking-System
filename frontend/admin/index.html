@@ -95,6 +95,10 @@
               <i data-lucide="calendar-check"></i> All Bookings
               <span class="nav-badge" id="sidebar-count">0</span>
             </a>
+            <a href="#" class="nav-item" data-section="history" id="nav-history">
+              <i data-lucide="history"></i> Booking History
+              <span class="nav-badge history-nav-badge" id="sidebar-history-count">0</span>
+            </a>
             <a href="#" class="nav-item" data-section="halls" id="nav-halls">
               <i data-lucide="building"></i> Halls
             </a>
@@ -322,6 +326,81 @@
 
             <div id="table-footer" class="table-footer">
               <span id="results-count"></span>
+            </div>
+          </section>
+
+          <!-- BOOKING HISTORY SECTION (Table Layout, No Cards) -->
+          <section id="section-history" class="section">
+            <div class="table-toolbar">
+              <div class="search-bar">
+                <i data-lucide="search"></i>
+                <input id="hist-search-input" type="text" placeholder="Search by booking ID, user name, email, hall...">
+              </div>
+              <div class="filter-row">
+                <div class="filter-group">
+                  <select id="hist-filter-status" class="filter-status-select">
+                    <option value="">All History Statuses</option>
+                    <option value="Completed">✅ Completed</option>
+                    <option value="Cancelled">🚫 Cancelled</option>
+                    <option value="Rejected">❌ Rejected</option>
+                    <option value="Expired">⏳ Expired (Pending)</option>
+                  </select>
+                  <select id="hist-filter-hall">
+                    <option value="">All Halls</option>
+                    <option value="1">L F Rasquina Hall</option>
+                    <option value="2">Robert Sequeria Hall</option>
+                    <option value="3">Sanidhya Hall</option>
+                    <option value="4">Magis Hall</option>
+                    <option value="5">Arrupe Hall 1</option>
+                    <option value="6">Arrupe Hall 2</option>
+                    <option value="7">Arrupe Hall 3</option>
+                    <option value="8">AV Room</option>
+                    <option value="9">Joseph Willy Hall</option>
+                    <option value="10">Eric Mathias</option>
+                    <option value="11">Xavier Hall</option>
+                  </select>
+                  <input id="hist-filter-date" type="date" class="hist-date-input" title="Filter by booking date">
+                </div>
+              </div>
+            </div>
+
+            <!-- History Quick Filter Tabs -->
+            <div class="status-tabs-container" id="history-status-tabs">
+              <button class="status-tab hist-tab active" data-hist-status="">All History <span class="tab-badge" id="hist-badge-all">0</span></button>
+              <button class="status-tab hist-tab tab-completed" data-hist-status="Completed">Completed <span class="tab-badge" id="hist-badge-completed">0</span></button>
+              <button class="status-tab hist-tab tab-cancelled" data-hist-status="Cancelled">Cancelled <span class="tab-badge" id="hist-badge-cancelled">0</span></button>
+              <button class="status-tab hist-tab tab-rejected" data-hist-status="Rejected">Rejected <span class="tab-badge" id="hist-badge-rejected">0</span></button>
+              <button class="status-tab hist-tab tab-expired" data-hist-status="Expired">Expired <span class="tab-badge" id="hist-badge-expired">0</span></button>
+            </div>
+
+            <!-- Booking History Table -->
+            <div class="table-card history-table-card">
+              <table class="bookings-table">
+                <thead>
+                  <tr>
+                    <th>Booking ID</th>
+                    <th>User</th>
+                    <th>Hall</th>
+                    <th>Date &amp; Session Time</th>
+                    <th>Purpose &amp; Pax</th>
+                    <th>Status &amp; Details</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody id="history-tbody">
+                  <tr>
+                    <td colspan="7" class="loading-row"><span class="spinner"></span> Loading booking history...</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div id="hist-empty" class="table-empty hidden">
+                <i data-lucide="history"></i>
+                <p>No booking history records match your filters</p>
+              </div>
+            </div>
+
+            <div id="hist-footer" class="table-footer">
+              <span id="hist-results-count"></span>
             </div>
           </section>
 

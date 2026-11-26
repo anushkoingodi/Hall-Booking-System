@@ -485,12 +485,127 @@ main {
 .booking-status.rejected {
   background: #FEE2E2; color: var(--error);
 }
+.booking-status.cancelled {
+  background: #F1F5F9; color: #475569;
+}
 .booking-history-section {
   padding-top: 0;
 }
 .badge-count.history-badge {
   background: #F1F5F9; color: var(--secondary);
 }
+
+/* Booking History Trigger & Modal */
+.pd-history-btn {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 0.45rem;
+  padding: 0.6rem 0.9rem;
+  background: #FFF7ED; color: var(--primary);
+  border: 1px solid #FED7AA; border-radius: 10px;
+  font-family: inherit; font-size: 0.84rem; font-weight: 600;
+  cursor: pointer; transition: 0.2s;
+}
+.pd-history-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+.pd-history-badge {
+  margin-left: auto;
+  background: var(--primary); color: #fff;
+  font-size: 0.72rem; font-weight: 700;
+  padding: 1px 7px; border-radius: 99px;
+}
+.pd-history-btn:hover .pd-history-badge { background: #fff; color: var(--primary); }
+
+.open-history-btn {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.5rem 0.95rem;
+  background: var(--surface); color: var(--secondary);
+  border: 1.5px solid var(--border); border-radius: var(--r-pill);
+  font-family: inherit; font-size: 0.85rem; font-weight: 600;
+  cursor: pointer; transition: 0.2s; box-shadow: var(--shadow-sm);
+}
+.open-history-btn i { width: 15px; height: 15px; color: var(--primary); }
+.open-history-btn:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
+.history-pill-count {
+  background: #F1F5F9; color: var(--secondary);
+  font-size: 0.75rem; font-weight: 700;
+  padding: 1px 7px; border-radius: 99px;
+}
+
+.history-modal-overlay {
+  position: fixed; inset: 0; z-index: 3000;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.history-modal-overlay.hidden { display: none !important; }
+.history-modal-card {
+  background: var(--bg, #F8FAFC);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  width: 100%; max-width: 820px; max-height: 85vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.22);
+  overflow: hidden;
+  animation: card-in 0.25s ease;
+}
+.history-modal-header {
+  background: var(--surface);
+  padding: 1.15rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.history-modal-icon {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--primary-light); color: var(--primary);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.history-modal-icon i { width: 19px; height: 19px; }
+.history-modal-close {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: #F1F5F9; border: 1px solid var(--border);
+  color: var(--secondary); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: 0.2s;
+}
+.history-modal-close:hover { background: #FEE2E2; color: var(--error); border-color: #FECACA; }
+.history-modal-close i { width: 18px; height: 18px; }
+.history-modal-body {
+  padding: 1.25rem 1.4rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.user-history-table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow-x: auto;
+}
+.user-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 580px;
+}
+.user-history-table th {
+  background: #F8FAFC;
+  padding: 0.75rem 0.9rem;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.user-history-table td {
+  padding: 0.8rem 0.9rem;
+  font-size: 0.85rem;
+  color: var(--secondary);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.user-history-table tbody tr:last-child td { border-bottom: none; }
+.user-history-table tbody tr:hover td { background: #FFF7ED; }
 
 .detail-row {
   display: flex; align-items: center; gap: 0.5rem;

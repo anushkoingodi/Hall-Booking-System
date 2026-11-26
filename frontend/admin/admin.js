@@ -22,6 +22,7 @@ let pendingDeleteId = null;
 let pendingDeleteAll = false;
 let autoRefreshTimer = null;
 let currentStatusFilter = "";
+let currentHistoryStatusFilter = "";
 
 // ── Bootstrap ─────────────────────────────────────────────────
 lucide.createIcons();
@@ -96,11 +97,12 @@ document.querySelectorAll('.nav-item').forEach(item => {
 // ═══════════════════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════════
-const SECTIONS = ["dashboard", "requests", "bookings", "halls"];
+const SECTIONS = ["dashboard", "requests", "bookings", "history", "halls"];
 const TITLES = {
   dashboard: ["Dashboard", "Overview of all hall bookings"],
-  requests: ["Accept / Reject", "Review booking requests and approve or reject"],
+  requests: ["Accept / Reject", "Review active booking requests and approve or reject"],
   bookings: ["All Bookings", "Complete list of all hall bookings"],
+  history: ["Booking History", "Permanent record of completed, cancelled, rejected, and expired bookings"],
   halls: ["Hall Directory", "View all available halls"],
 };
 
@@ -144,11 +146,14 @@ async function startAdmin() {
   autoRefreshTimer = setInterval(loadAll, 8000);
 }
 
+let hallsUIInitialized = false;
+
 function initHallsUI() {
   const statsGrid = document.getElementById("stats-grid");
   const hallsGrid = document.getElementById("halls-grid");
 
-  if (!statsGrid || !hallsGrid) return;
+  if (!statsGrid || !hallsGrid || hallsUIInitialized) return;
+  hallsUIInitialized = true;
 
   const icons = ["mic-2", "presentation", "briefcase", "users", "map-pin", "monitor"];
   const colors = ["auditorium", "seminar", "conference", "auditorium", "seminar", "conference"];
@@ -270,6 +275,7 @@ async function loadBookings() {
     allBookings = data;
     applyFilters();
     applyRequestFilters();
+    applyHistoryFilters();
     renderRecent(data);
   } catch (err) {
     console.error("Load bookings error:", err);
@@ -464,7 +470,10 @@ function applyRequestFilters() {
     return matchQ && matchH && matchD && matchS;
   });
 
-  filtered.sort((a, b) => b.date.localeCompare(a.date) || a.time.localeCompare(b.time));
+  filtered.sort((a, b) =>
+    String(b.date || "").localeCompare(String(a.date || "")) ||
+    String(a.time || "").localeCompare(String(b.time || ""))
+  );
   renderBookingCards(filtered);
 }
 
@@ -495,17 +504,17 @@ function renderBookingCards(bookings) {
 
     // Details from booking object
     const lecturerName = b.userName || "Not specified";
-    const department   = b.dept || "Not specified";
-    const email        = b.userEmail || "Not specified";
-    const contact      = b.phone || "Not specified";
+    const department = b.dept || "Not specified";
+    const email = b.userEmail || "Not specified";
+    const contact = b.phone || "Not specified";
 
-    const eventName    = b.eventName || "Campus Event / Lecture";
-    const bookingDate  = formatDate(b.date);
-    const timeSlot     = b.time;
+    const eventName = b.eventName || "Campus Event / Lecture";
+    const bookingDate = formatDate(b.date);
+    const timeSlot = b.time;
     const participants = b.participants ? `${b.participants} Attendees` : "Open / Not specified";
 
-    const isApproved   = status === "Approved";
-    const isRejected   = status === "Rejected";
+    const isApproved = status === "Approved";
+    const isRejected = status === "Rejected";
 
     return `
       <div class="booking-card-item status-${status}" id="bcard-${b._id}">
@@ -601,11 +610,11 @@ function renderBookingCards(bookings) {
 
         <!-- Bottom Action Buttons: Approve (Green) & Reject (Red) -->
         <div class="bci-actions">
-          <button class="btn-approve" id="app-btn-${b._id}" onclick="updateBookingStatus('${b._id}', 'Approved')" ${isApproved ? 'disabled' : ''}>
+          <button class="btn-approve" id="app-btn-${b._id}" onclick="updateBookingStatus('${b._id}', 'Approved')" ${(isApproved || status === 'Cancelled') ? 'disabled' : ''}>
             <i data-lucide="check"></i>
-            <span>${isApproved ? 'Approved ✓' : 'APPROVE'}</span>
+            <span>${isApproved ? 'Approved ✓' : (status === 'Cancelled' ? 'Cancelled' : 'APPROVE')}</span>
           </button>
-          <button class="btn-reject" id="rej-btn-${b._id}" onclick="updateBookingStatus('${b._id}', 'Rejected')" ${isRejected ? 'disabled' : ''}>
+          <button class="btn-reject" id="rej-btn-${b._id}" onclick="updateBookingStatus('${b._id}', 'Rejected')" ${(isRejected || status === 'Cancelled') ? 'disabled' : ''}>
             <i data-lucide="x"></i>
             <span>${isRejected ? 'Rejected ✕' : 'REJECT'}</span>
           </button>
@@ -633,7 +642,7 @@ function escapeHtml(str) {
 // ═══════════════════════════════════════════════════════════════
 //  APPROVE & REJECT ACTIONS
 // ═══════════════════════════════════════════════════════════════
-window.updateBookingStatus = async function(id, newStatus) {
+window.updateBookingStatus = async function (id, newStatus) {
   const appBtn = document.getElementById(`app-btn-${id}`);
   const rejBtn = document.getElementById(`rej-btn-${id}`);
 
@@ -659,9 +668,14 @@ window.updateBookingStatus = async function(id, newStatus) {
       const idx = allBookings.findIndex(b => b._id === id);
       if (idx !== -1) {
         allBookings[idx].status = newStatus;
+        if (newStatus === "Rejected") {
+          allBookings[idx].rejectedBy = "Admin";
+          allBookings[idx].rejectedAt = new Date().toISOString();
+        }
       }
       applyRequestFilters();
       applyFilters();
+      applyHistoryFilters();
       renderRecent(allBookings);
       loadStats();
     } else {
@@ -675,6 +689,663 @@ window.updateBookingStatus = async function(id, newStatus) {
     if (rejBtn) rejBtn.disabled = false;
   }
 };
+
+// ═══════════════════════════════════════════════════════════════
+//  ADMIN BOOKING HISTORY (LIFECYCLE + FILTERS + RENDER)
+// ═══════════════════════════════════════════════════════════════
+function parseTimeToMinutes(str) {
+  if (!str || typeof str !== "string") return null;
+  const clean = str.trim();
+  const match = clean.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
+  if (!match) return null;
+
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const period = match[3] ? match[3].toUpperCase() : null;
+
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes) || minutes < 0 || minutes > 59) return null;
+
+  if (period) {
+    if (hours < 1 || hours > 12) return null;
+    if (period === "PM" && hours !== 12) hours += 12;
+    if (period === "AM" && hours === 12) hours = 0;
+  } else if (hours < 0 || hours > 23) {
+    return null;
+  }
+
+  return hours * 60 + minutes;
+}
+
+function getBookingSchedule(booking, now = new Date()) {
+  const rawTime = typeof booking.time === "string" ? booking.time : "";
+  const parts = rawTime.split(/\s*[-–]\s*/);
+  const startTimeText = parts[0] ? parts[0].trim() : "";
+  const endTimeText = parts[1] ? parts[1].trim() : "";
+
+  const dateMatch = typeof booking.date === "string"
+    ? booking.date.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    : null;
+
+  if (!dateMatch) {
+    return { startTimeText, endTimeText, endDateTime: null, isPast: false };
+  }
+
+  const year = Number(dateMatch[1]);
+  const month = Number(dateMatch[2]);
+  const day = Number(dateMatch[3]);
+
+  const parsedEnd = parseTimeToMinutes(endTimeText);
+  const endMin = parsedEnd !== null
+    ? parsedEnd
+    : (typeof booking.endMin === "number" && Number.isFinite(booking.endMin) ? booking.endMin : null);
+
+  if (endMin === null || endMin < 0 || endMin > 1440) {
+    return { startTimeText, endTimeText, endDateTime: null, isPast: false };
+  }
+
+  const endDateTime = new Date(year, month - 1, day, Math.floor(endMin / 60), endMin % 60, 0, 0);
+  if (Number.isNaN(endDateTime.getTime())) {
+    return { startTimeText, endTimeText, endDateTime: null, isPast: false };
+  }
+
+  return {
+    startTimeText,
+    endTimeText,
+    endDateTime,
+    isPast: now.getTime() >= endDateTime.getTime()
+  };
+}
+
+function getAdminHistoryInfo(booking, now = new Date()) {
+  const status = booking.status || "Pending";
+  const schedule = getBookingSchedule(booking, now);
+
+  if (status === "Cancelled") {
+    return {
+      isHistory: true,
+      historyStatus: "Cancelled",
+      displayLabel: "Cancelled by User",
+      originalStatus: booking.statusBeforeCancel || "Pending",
+      schedule,
+      sortTimestamp: new Date(booking.cancelledAt || booking.bookedAt || 0).getTime()
+    };
+  }
+
+  if (status === "Rejected") {
+    return {
+      isHistory: true,
+      historyStatus: "Rejected",
+      displayLabel: "Rejected by Admin",
+      originalStatus: "Rejected",
+      schedule,
+      sortTimestamp: new Date(booking.rejectedAt || booking.bookedAt || 0).getTime()
+    };
+  }
+
+  if (schedule.isPast) {
+    if (status === "Approved") {
+      return {
+        isHistory: true,
+        historyStatus: "Completed",
+        displayLabel: "Completed",
+        originalStatus: "Approved",
+        schedule,
+        sortTimestamp: schedule.endDateTime ? schedule.endDateTime.getTime() : new Date(booking.bookedAt || 0).getTime()
+      };
+    }
+    return {
+      isHistory: true,
+      historyStatus: "Expired",
+      displayLabel: "Expired / Pending",
+      originalStatus: "Pending",
+      schedule,
+      sortTimestamp: schedule.endDateTime ? schedule.endDateTime.getTime() : new Date(booking.bookedAt || 0).getTime()
+    };
+  }
+
+  return {
+    isHistory: false,
+    historyStatus: null,
+    displayLabel: status,
+    originalStatus: status,
+    schedule,
+    sortTimestamp: new Date(booking.bookedAt || 0).getTime()
+  };
+}
+
+function formatDateTime(dateVal) {
+  if (!dateVal) return "—";
+  const d = new Date(dateVal);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("en-IN", {
+    year: "numeric", month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit"
+  });
+}
+
+const histSearchInput = document.getElementById("hist-search-input");
+const histFilterStatus = document.getElementById("hist-filter-status");
+const histFilterHall = document.getElementById("hist-filter-hall");
+const histFilterDate = document.getElementById("hist-filter-date");
+
+if (histSearchInput) histSearchInput.addEventListener("input", applyHistoryFilters);
+if (histFilterHall) histFilterHall.addEventListener("change", applyHistoryFilters);
+if (histFilterDate) histFilterDate.addEventListener("change", applyHistoryFilters);
+if (histFilterStatus) {
+  histFilterStatus.addEventListener("change", () => {
+    currentHistoryStatusFilter = histFilterStatus.value;
+    updateHistoryTabButtons();
+    applyHistoryFilters();
+  });
+}
+
+document.querySelectorAll(".hist-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    currentHistoryStatusFilter = tab.dataset.histStatus || "";
+    if (histFilterStatus) histFilterStatus.value = currentHistoryStatusFilter;
+    updateHistoryTabButtons();
+    applyHistoryFilters();
+  });
+});
+
+function updateHistoryTabButtons() {
+  document.querySelectorAll(".hist-tab").forEach(tab => {
+    const s = tab.dataset.histStatus || "";
+    tab.classList.toggle("active", s === currentHistoryStatusFilter);
+  });
+}
+
+function applyHistoryFilters() {
+  const now = new Date();
+  const historyRecords = allBookings
+    .map(b => ({ booking: b, info: getAdminHistoryInfo(b, now) }))
+    .filter(item => item.info.isHistory);
+
+  // Update counts
+  const allCount = historyRecords.length;
+  const completedCount = historyRecords.filter(x => x.info.historyStatus === "Completed").length;
+  const cancelledCount = historyRecords.filter(x => x.info.historyStatus === "Cancelled").length;
+  const rejectedCount = historyRecords.filter(x => x.info.historyStatus === "Rejected").length;
+  const expiredCount = historyRecords.filter(x => x.info.historyStatus === "Expired").length;
+
+  const sideHist = document.getElementById("sidebar-history-count");
+  const bAll = document.getElementById("hist-badge-all");
+  const bCom = document.getElementById("hist-badge-completed");
+  const bCan = document.getElementById("hist-badge-cancelled");
+  const bRej = document.getElementById("hist-badge-rejected");
+  const bExp = document.getElementById("hist-badge-expired");
+
+  if (sideHist) sideHist.textContent = allCount;
+  if (bAll) bAll.textContent = allCount;
+  if (bCom) bCom.textContent = completedCount;
+  if (bCan) bCan.textContent = cancelledCount;
+  if (bRej) bRej.textContent = rejectedCount;
+  if (bExp) bExp.textContent = expiredCount;
+
+  const query = (histSearchInput ? histSearchInput.value : "").toLowerCase().trim();
+  const hallFilt = histFilterHall ? histFilterHall.value : "";
+  const dateFilt = histFilterDate ? histFilterDate.value : "";
+  const statusFilt = currentHistoryStatusFilter;
+
+  const filtered = historyRecords.filter(({ booking: b, info }) => {
+    const idStr = String(b._id || "").toLowerCase();
+    const userName = (b.userName || "").toLowerCase();
+    const userEmail = (b.userEmail || "").toLowerCase();
+    const hallName = (HALLS[String(b.hallId)]?.name || "").toLowerCase();
+    const eventName = (b.eventName || "").toLowerCase();
+
+    const matchQ = !query ||
+      idStr.includes(query) ||
+      userName.includes(query) ||
+      userEmail.includes(query) ||
+      hallName.includes(query) ||
+      eventName.includes(query);
+
+    const matchH = !hallFilt || String(b.hallId) === hallFilt;
+    const matchD = !dateFilt || b.date === dateFilt;
+    const matchS = !statusFilt || info.historyStatus === statusFilt;
+
+    return matchQ && matchH && matchD && matchS;
+  });
+
+  // Newest history records first
+  filtered.sort((a, b) =>
+    b.info.sortTimestamp - a.info.sortTimestamp ||
+    String(b.booking.date || "").localeCompare(String(a.booking.date || ""))
+  );
+
+  renderHistoryCards(filtered);
+}
+
+function renderHistoryCards(items) {
+  const container = document.getElementById("history-cards-grid");
+  const empty = document.getElementById("hist-empty");
+  const footer = document.getElementById("hist-results-count");
+
+  if (!container) return;
+
+  if (items.length === 0) {
+    container.innerHTML = "";
+    if (empty) empty.classList.remove("hidden");
+    if (footer) footer.textContent = "No history records match your filters";
+    return;
+  }
+
+  if (empty) empty.classList.add("hidden");
+  if (footer) footer.textContent = `Showing ${items.length} history record${items.length !== 1 ? "s" : ""}`;
+
+  container.innerHTML = items.map(({ booking: b, info }) => {
+    const hallName = HALLS[String(b.hallId)]?.name || `Hall ${b.hallId}`;
+    const hStatus = info.historyStatus;
+    const statusIcon = hStatus === "Completed" ? "check-circle"
+      : (hStatus === "Cancelled" ? "ban"
+        : (hStatus === "Rejected" ? "x-circle" : "clock-3"));
+
+    const userName = b.userName || "Not specified";
+    const userEmail = b.userEmail || "Not specified";
+    const eventName = b.eventName || "Campus Event / Lecture";
+    const participants = b.participants ? `${b.participants} Attendees` : "Not specified";
+    const startTime = info.schedule.startTimeText || "—";
+    const endTime = info.schedule.endTimeText || "—";
+    const createdAt = formatDateTime(b.bookedAt);
+
+    let metaNoteHtml = "";
+    if (hStatus === "Cancelled") {
+      const when = b.cancelledAt ? ` on ${formatDateTime(b.cancelledAt)}` : "";
+      const prev = info.originalStatus ? ` (Original status: ${info.originalStatus})` : "";
+      metaNoteHtml = `<div class="bci-meta-note note-cancelled"><i data-lucide="info"></i><span>Cancelled by User${when}${prev}</span></div>`;
+    } else if (hStatus === "Rejected") {
+      const when = b.rejectedAt ? ` on ${formatDateTime(b.rejectedAt)}` : "";
+      metaNoteHtml = `<div class="bci-meta-note note-rejected"><i data-lucide="shield-alert"></i><span>Rejected by Admin${when}</span></div>`;
+    } else if (hStatus === "Expired") {
+      metaNoteHtml = `<div class="bci-meta-note note-expired"><i data-lucide="clock-3"></i><span>Session time passed — Original status preserved: <strong>Pending</strong></span></div>`;
+    } else {
+      metaNoteHtml = `<div class="bci-meta-note note-completed"><i data-lucide="check-circle-2"></i><span>Session completed — Original status: <strong>Approved</strong></span></div>`;
+    }
+
+    return `
+      <div class="booking-card-item status-${hStatus}" id="hcard-${b._id}">
+        <div class="bci-header">
+          <div class="bci-header-left">
+            <div class="bci-hall-chip">
+              <i data-lucide="building"></i>
+              <span>${escapeHtml(hallName)}</span>
+            </div>
+            <div class="bci-event-title">${escapeHtml(eventName)}</div>
+            <div class="bci-id-chip" title="Booking ID">ID: ${escapeHtml(b._id)}</div>
+          </div>
+          <div class="bci-status-badge ${hStatus}">
+            <i data-lucide="${statusIcon}"></i>
+            <span>${escapeHtml(info.displayLabel)}</span>
+          </div>
+        </div>
+
+        <div class="bci-sections">
+          <div class="bci-block">
+            <div class="bci-block-title"><i data-lucide="user"></i> USER DETAILS</div>
+            <div class="bci-grid">
+              <div class="bci-field">
+                <span class="bci-field-label">User Name</span>
+                <span class="bci-field-val"><i data-lucide="user"></i> ${escapeHtml(userName)}</span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">User Email</span>
+                <span class="bci-field-val"><i data-lucide="mail"></i> ${escapeHtml(userEmail)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bci-block">
+            <div class="bci-block-title"><i data-lucide="calendar"></i> SESSION & BOOKING DETAILS</div>
+            <div class="bci-grid">
+              <div class="bci-field">
+                <span class="bci-field-label">Hall Name</span>
+                <span class="bci-field-val"><i data-lucide="map-pin"></i> ${escapeHtml(hallName)}</span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">Booking Date</span>
+                <span class="bci-field-val"><i data-lucide="calendar-days"></i> ${formatDate(b.date)}</span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">Start Time</span>
+                <span class="bci-field-val"><i data-lucide="clock-3"></i> ${escapeHtml(startTime)}</span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">End Time</span>
+                <span class="bci-field-val"><i data-lucide="clock"></i> ${escapeHtml(endTime)}</span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">Booking Purpose</span>
+                <span class="bci-field-val"><i data-lucide="bookmark"></i> ${escapeHtml(eventName)}</span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">Participants</span>
+                <span class="bci-field-val"><i data-lucide="users"></i> ${escapeHtml(participants)}</span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">Approval Status</span>
+                <span class="bci-field-val"><i data-lucide="tag"></i> ${escapeHtml(info.originalStatus)}</span>
+              </div>
+              <div class="bci-field">
+                <span class="bci-field-label">Created At</span>
+                <span class="bci-field-val"><i data-lucide="calendar-plus"></i> ${escapeHtml(createdAt)}</span>
+              </div>
+            </div>
+          </div>
+
+          ${metaNoteHtml}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  lucide.createIcons();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ADMIN BOOKING HISTORY (LIFECYCLE + FILTERS + TABLE RENDER)
+// ═══════════════════════════════════════════════════════════════
+function parseTimeToMinutes(str) {
+  if (!str || typeof str !== "string") return null;
+  const clean = str.trim();
+  const match = clean.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
+  if (!match) return null;
+
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const period = match[3] ? match[3].toUpperCase() : null;
+
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes) || minutes < 0 || minutes > 59) return null;
+
+  if (period) {
+    if (hours < 1 || hours > 12) return null;
+    if (period === "PM" && hours !== 12) hours += 12;
+    if (period === "AM" && hours === 12) hours = 0;
+  } else if (hours < 0 || hours > 23) {
+    return null;
+  }
+
+  return hours * 60 + minutes;
+}
+
+function getBookingSchedule(booking, now = new Date()) {
+  const rawTime = typeof booking.time === "string" ? booking.time : "";
+  const parts = rawTime.split(/\s*[-–]\s*/);
+  const startTimeText = parts[0] ? parts[0].trim() : "";
+  const endTimeText = parts[1] ? parts[1].trim() : "";
+
+  const dateMatch = typeof booking.date === "string"
+    ? booking.date.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    : null;
+
+  if (!dateMatch) {
+    return { startTimeText, endTimeText, endDateTime: null, isPast: false };
+  }
+
+  const year = Number(dateMatch[1]);
+  const month = Number(dateMatch[2]);
+  const day = Number(dateMatch[3]);
+
+  const parsedEnd = parseTimeToMinutes(endTimeText);
+  const endMin = parsedEnd !== null
+    ? parsedEnd
+    : (typeof booking.endMin === "number" && Number.isFinite(booking.endMin) ? booking.endMin : null);
+
+  if (endMin === null || endMin < 0 || endMin > 1440) {
+    return { startTimeText, endTimeText, endDateTime: null, isPast: false };
+  }
+
+  const endDateTime = new Date(year, month - 1, day, Math.floor(endMin / 60), endMin % 60, 0, 0);
+  if (Number.isNaN(endDateTime.getTime())) {
+    return { startTimeText, endTimeText, endDateTime: null, isPast: false };
+  }
+
+  return {
+    startTimeText,
+    endTimeText,
+    endDateTime,
+    isPast: now.getTime() >= endDateTime.getTime()
+  };
+}
+
+function getAdminHistoryInfo(booking, now = new Date()) {
+  const status = booking.status || "Pending";
+  const schedule = getBookingSchedule(booking, now);
+
+  if (status === "Cancelled") {
+    return {
+      isHistory: true,
+      historyStatus: "Cancelled",
+      displayLabel: "Cancelled by User",
+      originalStatus: booking.statusBeforeCancel || "Pending",
+      schedule,
+      sortTimestamp: new Date(booking.cancelledAt || booking.bookedAt || 0).getTime()
+    };
+  }
+
+  if (status === "Rejected") {
+    return {
+      isHistory: true,
+      historyStatus: "Rejected",
+      displayLabel: "Rejected by Admin",
+      originalStatus: "Rejected",
+      schedule,
+      sortTimestamp: new Date(booking.rejectedAt || booking.bookedAt || 0).getTime()
+    };
+  }
+
+  if (schedule.isPast) {
+    if (status === "Approved") {
+      return {
+        isHistory: true,
+        historyStatus: "Completed",
+        displayLabel: "Completed",
+        originalStatus: "Approved",
+        schedule,
+        sortTimestamp: schedule.endDateTime ? schedule.endDateTime.getTime() : new Date(booking.bookedAt || 0).getTime()
+      };
+    }
+    return {
+      isHistory: true,
+      historyStatus: "Expired",
+      displayLabel: "Expired / Pending",
+      originalStatus: "Pending",
+      schedule,
+      sortTimestamp: schedule.endDateTime ? schedule.endDateTime.getTime() : new Date(booking.bookedAt || 0).getTime()
+    };
+  }
+
+  return {
+    isHistory: false,
+    historyStatus: null,
+    displayLabel: status,
+    originalStatus: status,
+    schedule,
+    sortTimestamp: new Date(booking.bookedAt || 0).getTime()
+  };
+}
+
+function formatDateTime(dateVal) {
+  if (!dateVal) return "—";
+  const d = new Date(dateVal);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("en-IN", {
+    year: "numeric", month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit"
+  });
+}
+
+const histSearchInput = document.getElementById("hist-search-input");
+const histFilterStatus = document.getElementById("hist-filter-status");
+const histFilterHall = document.getElementById("hist-filter-hall");
+const histFilterDate = document.getElementById("hist-filter-date");
+
+if (histSearchInput) histSearchInput.addEventListener("input", applyHistoryFilters);
+if (histFilterHall) histFilterHall.addEventListener("change", applyHistoryFilters);
+if (histFilterDate) histFilterDate.addEventListener("change", applyHistoryFilters);
+if (histFilterStatus) {
+  histFilterStatus.addEventListener("change", () => {
+    currentHistoryStatusFilter = histFilterStatus.value;
+    updateHistoryTabButtons();
+    applyHistoryFilters();
+  });
+}
+
+document.querySelectorAll(".hist-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    currentHistoryStatusFilter = tab.dataset.histStatus || "";
+    if (histFilterStatus) histFilterStatus.value = currentHistoryStatusFilter;
+    updateHistoryTabButtons();
+    applyHistoryFilters();
+  });
+});
+
+function updateHistoryTabButtons() {
+  document.querySelectorAll(".hist-tab").forEach(tab => {
+    const s = tab.dataset.histStatus || "";
+    tab.classList.toggle("active", s === currentHistoryStatusFilter);
+  });
+}
+
+function applyHistoryFilters() {
+  const now = new Date();
+  const historyRecords = allBookings
+    .map(b => ({ booking: b, info: getAdminHistoryInfo(b, now) }))
+    .filter(item => item.info.isHistory);
+
+  const allCount = historyRecords.length;
+  const completedCount = historyRecords.filter(x => x.info.historyStatus === "Completed").length;
+  const cancelledCount = historyRecords.filter(x => x.info.historyStatus === "Cancelled").length;
+  const rejectedCount = historyRecords.filter(x => x.info.historyStatus === "Rejected").length;
+  const expiredCount = historyRecords.filter(x => x.info.historyStatus === "Expired").length;
+
+  const sideHist = document.getElementById("sidebar-history-count");
+  const bAll = document.getElementById("hist-badge-all");
+  const bCom = document.getElementById("hist-badge-completed");
+  const bCan = document.getElementById("hist-badge-cancelled");
+  const bRej = document.getElementById("hist-badge-rejected");
+  const bExp = document.getElementById("hist-badge-expired");
+
+  if (sideHist) sideHist.textContent = allCount;
+  if (bAll) bAll.textContent = allCount;
+  if (bCom) bCom.textContent = completedCount;
+  if (bCan) bCan.textContent = cancelledCount;
+  if (bRej) bRej.textContent = rejectedCount;
+  if (bExp) bExp.textContent = expiredCount;
+
+  const query = (histSearchInput ? histSearchInput.value : "").toLowerCase().trim();
+  const hallFilt = histFilterHall ? histFilterHall.value : "";
+  const dateFilt = histFilterDate ? histFilterDate.value : "";
+  const statusFilt = currentHistoryStatusFilter;
+
+  const filtered = historyRecords.filter(({ booking: b, info }) => {
+    const idStr = String(b._id || "").toLowerCase();
+    const userName = (b.userName || "").toLowerCase();
+    const userEmail = (b.userEmail || "").toLowerCase();
+    const hallName = (HALLS[String(b.hallId)]?.name || "").toLowerCase();
+    const eventName = (b.eventName || "").toLowerCase();
+
+    const matchQ = !query ||
+      idStr.includes(query) ||
+      userName.includes(query) ||
+      userEmail.includes(query) ||
+      hallName.includes(query) ||
+      eventName.includes(query);
+
+    const matchH = !hallFilt || String(b.hallId) === hallFilt;
+    const matchD = !dateFilt || b.date === dateFilt;
+    const matchS = !statusFilt || info.historyStatus === statusFilt;
+
+    return matchQ && matchH && matchD && matchS;
+  });
+
+  filtered.sort((a, b) =>
+    b.info.sortTimestamp - a.info.sortTimestamp ||
+    String(b.booking.date || "").localeCompare(String(a.booking.date || ""))
+  );
+
+  renderHistoryTable(filtered);
+}
+
+function renderHistoryTable(items) {
+  const tbody = document.getElementById("history-tbody");
+  const empty = document.getElementById("hist-empty");
+  const footer = document.getElementById("hist-results-count");
+
+  if (!tbody) return;
+
+  if (items.length === 0) {
+    tbody.innerHTML = "";
+    if (empty) empty.classList.remove("hidden");
+    if (footer) footer.textContent = "No history records match your filters";
+    return;
+  }
+
+  if (empty) empty.classList.add("hidden");
+  if (footer) footer.textContent = `Showing ${items.length} history record${items.length !== 1 ? "s" : ""}`;
+
+  const colors = ["auditorium", "seminar", "conference", "auditorium", "seminar", "conference"];
+
+  tbody.innerHTML = items.map(({ booking: b, info }) => {
+    const hallName = HALLS[String(b.hallId)]?.name || `Hall ${b.hallId}`;
+    const cls = colors[b.hallId % 6] || "auditorium";
+    const hStatus = info.historyStatus;
+    const statusIcon = hStatus === "Completed" ? "check-circle"
+      : (hStatus === "Cancelled" ? "ban"
+        : (hStatus === "Rejected" ? "x-circle" : "clock-3"));
+
+    const userName = b.userName || "Not specified";
+    const userEmail = b.userEmail || "";
+    const eventName = b.eventName || "—";
+    const participants = b.participants ? `${b.participants} pax` : "—";
+    const startTime = info.schedule.startTimeText || "—";
+    const endTime = info.schedule.endTimeText || "—";
+    const createdAt = formatDateTime(b.bookedAt);
+    const shortId = String(b._id || "");
+
+    let extraDetail = `Original: ${info.originalStatus}`;
+    if (hStatus === "Cancelled") {
+      extraDetail = b.cancelledAt
+        ? `Cancelled by User (${formatDateTime(b.cancelledAt)}) • Orig: ${info.originalStatus}`
+        : `Cancelled by User • Orig: ${info.originalStatus}`;
+    } else if (hStatus === "Rejected") {
+      extraDetail = b.rejectedAt
+        ? `Rejected by Admin (${formatDateTime(b.rejectedAt)})`
+        : `Rejected by Admin`;
+    } else if (hStatus === "Expired") {
+      extraDetail = `Session ended • Orig: Pending`;
+    }
+
+    return `
+      <tr id="hrow-${b._id}">
+        <td><span class="bci-id-chip" title="${escapeHtml(shortId)}">${escapeHtml(shortId)}</span></td>
+        <td>
+          <div style="font-weight:600;color:#fff;">${escapeHtml(userName)}</div>
+          ${userEmail ? `<div style="font-size:0.75rem;color:var(--text-muted);">${escapeHtml(userEmail)}</div>` : ""}
+        </td>
+        <td><span class="hall-chip ${cls}">${escapeHtml(hallName)}</span></td>
+        <td>
+          <div style="font-weight:600;color:#fff;">${formatDate(b.date)}</div>
+          <div style="font-size:0.78rem;color:var(--text-dim);">${escapeHtml(startTime)} – ${escapeHtml(endTime)}</div>
+        </td>
+        <td>
+          <div style="font-weight:600;color:#fff;">${escapeHtml(eventName)}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">Participants: ${escapeHtml(participants)}</div>
+        </td>
+        <td>
+          <span class="bci-status-badge ${hStatus}" style="font-size:0.72rem;padding:0.2rem 0.6rem;">
+            <i data-lucide="${statusIcon}" style="width:12px;height:12px;"></i>
+            <span>${escapeHtml(info.displayLabel)}</span>
+          </span>
+          <div style="font-size:0.73rem;color:var(--text-muted);margin-top:4px;">${escapeHtml(extraDetail)}</div>
+        </td>
+        <td style="font-size:0.78rem;color:var(--text-dim);white-space:nowrap;">${escapeHtml(createdAt)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  lucide.createIcons();
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  RENDER RECENT (Dashboard)
@@ -700,11 +1371,11 @@ function renderRecent(bookings) {
       </thead>
       <tbody>
         ${recent.map((b, i) => {
-          const hallName = HALLS[String(b.hallId)]?.name || `Hall ${b.hallId}`;
-          const cls = colors[b.hallId % 6] || "auditorium";
-          const status = b.status || "Pending";
-          const eventOrUser = b.eventName ? b.eventName : (b.userName || "Booking");
-          return `
+    const hallName = HALLS[String(b.hallId)]?.name || `Hall ${b.hallId}`;
+    const cls = colors[b.hallId % 6] || "auditorium";
+    const status = b.status || "Pending";
+    const eventOrUser = b.eventName ? b.eventName : (b.userName || "Booking");
+    return `
             <tr id="drow-${b._id}">
               <td class="row-index">${i + 1}</td>
               <td><span class="hall-chip ${cls}">${hallName}</span></td>
@@ -718,7 +1389,7 @@ function renderRecent(bookings) {
                 </button>
               </td>
             </tr>`;
-        }).join("")}
+  }).join("")}
       </tbody>
     </table>
   `;
@@ -794,7 +1465,7 @@ async function deleteSingle(id) {
   });
 
   try {
-    const res = await fetch(`/bookings/${id}`, { method: "DELETE" });
+    const res = await fetch(`/bookings/${id}?permanent=true`, { method: "DELETE" });
     const data = await res.json();
 
     if (data.success) {

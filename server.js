@@ -59,28 +59,28 @@ async function connectToDB() {
 
 // ── Schemas ───────────────────────────────────────────────────
 const bookingSchema = new mongoose.Schema({
-  hallId:       { type: Number, required: true },
-  date:         { type: String, required: true },
-  time:         { type: String, required: true },   // human-readable "09:00 AM - 11:00 AM"
-  startMin:     { type: Number, required: true },   // minutes from midnight, for overlap checks
-  endMin:       { type: Number, required: true },
-  userEmail:    { type: String, default: "" },
-  userName:     { type: String, default: "" },
-  dept:         { type: String, default: "" },
-  phone:        { type: String, default: "" },
-  eventName:    { type: String, default: "" },
+  hallId: { type: Number, required: true },
+  date: { type: String, required: true },
+  time: { type: String, required: true },   // human-readable "09:00 AM - 11:00 AM"
+  startMin: { type: Number, required: true },   // minutes from midnight, for overlap checks
+  endMin: { type: Number, required: true },
+  userEmail: { type: String, default: "" },
+  userName: { type: String, default: "" },
+  dept: { type: String, default: "" },
+  phone: { type: String, default: "" },
+  eventName: { type: String, default: "" },
   participants: { type: Number, default: 0 },
-  status:       { type: String, enum: ["Pending", "Approved", "Rejected"], default: "Pending" },
-  bookedAt:     { type: Date, default: Date.now }
+  status: { type: String, enum: ["Pending", "Approved", "Rejected"], default: "Pending" },
+  bookedAt: { type: Date, default: Date.now }
 });
 
 const Booking = mongoose.model("Booking", bookingSchema);
 
 const userSchema = new mongoose.Schema({
-  name:         { type: String, required: true },
-  email:        { type: String, required: true, unique: true, lowercase: true, trim: true },
-  dept:         { type: String, default: "" },
-  phone:        { type: String, default: "" },
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  dept: { type: String, default: "" },
+  phone: { type: String, default: "" },
   registeredAt: { type: Date, default: Date.now }
 });
 
@@ -109,17 +109,17 @@ function parseTimeRange(timeStr) {
 
 // ── Hall data ──────────────────────────────────────────────────
 const HALLS = {
-  1:  { name: "L F Rasquina Hall",    capacity: 123  },
-  2:  { name: "Robert Sequeria Hall", capacity: 415  },
-  3:  { name: "Sanidhya Hall",        capacity: 80   },
-  4:  { name: "Magis Hall",           capacity: 50   },
-  5:  { name: "Arrupe Hall 1",        capacity: null },
-  6:  { name: "Arrupe Hall 2",        capacity: null },
-  7:  { name: "Arrupe Hall 3",        capacity: null },
-  8:  { name: "AV Room",             capacity: 120  },
-  9:  { name: "Joseph Willy Hall",    capacity: 80   },
-  10: { name: "Eric Mathias Hall",    capacity: 200  },
-  11: { name: "Xavier Hall",          capacity: 150  }
+  1: { name: "L F Rasquina Hall", capacity: 123 },
+  2: { name: "Robert Sequeria Hall", capacity: 415 },
+  3: { name: "Sanidhya Hall", capacity: 80 },
+  4: { name: "Magis Hall", capacity: 50 },
+  5: { name: "Arrupe Hall 1", capacity: null },
+  6: { name: "Arrupe Hall 2", capacity: null },
+  7: { name: "Arrupe Hall 3", capacity: null },
+  8: { name: "AV Room", capacity: 120 },
+  9: { name: "Joseph Willy Hall", capacity: 80 },
+  10: { name: "Eric Mathias Hall", capacity: 200 },
+  11: { name: "Xavier Hall", capacity: 150 }
 };
 
 // ── DB Status ──────────────────────────────────────────────────
@@ -282,7 +282,7 @@ app.get("/bookings/all", async (req, res) => {
   try {
     await connectToDB();
     const data = await Booking.find().sort({ date: 1, time: 1 });
-    
+
     // Enrich with dept & phone from User model if missing in older documents
     const enriched = await Promise.all(data.map(async (doc) => {
       const obj = doc.toObject();
@@ -349,7 +349,7 @@ app.post("/book", async (req, res) => {
       date,
       status: "Approved",
       startMin: { $lt: newEnd },
-      endMin:   { $gt: newStart }
+      endMin: { $gt: newStart }
     });
 
     if (approvedConflict) {
@@ -378,9 +378,9 @@ app.post("/book", async (req, res) => {
       date,
       time,
       startMin: newStart,
-      endMin:   newEnd,
+      endMin: newEnd,
       userEmail: cleanEmail,
-      userName:  resolvedUserName,
+      userName: resolvedUserName,
       dept: userDept,
       phone: userPhone,
       eventName: (eventName || "").trim(),
@@ -422,7 +422,7 @@ app.patch("/api/bookings/:id/status", async (req, res) => {
         date: booking.date,
         status: "Approved",
         startMin: { $lt: booking.endMin },
-        endMin:   { $gt: booking.startMin }
+        endMin: { $gt: booking.startMin }
       });
 
       if (conflict) {
@@ -461,7 +461,7 @@ app.post("/bookings/:id/approve", async (req, res) => {
       date: booking.date,
       status: "Approved",
       startMin: { $lt: booking.endMin },
-      endMin:   { $gt: booking.startMin }
+      endMin: { $gt: booking.startMin }
     });
 
     if (conflict) {
